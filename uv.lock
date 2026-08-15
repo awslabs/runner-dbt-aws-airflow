@@ -4479,7 +4479,7 @@ wheels = [
 
 [[package]]
 name = "runner-dbt-aws-airflow"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml", marker = "python_full_version >= '3.10'" },
