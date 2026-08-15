@@ -55,18 +55,13 @@ def validate_resource_tags(tags: Any, *, where: str) -> None:
     if tags is None:
         return
     if not isinstance(tags, dict):
-        raise ResourceTagsError(
-            f"{where}: must be a dict[str, str], got {type(tags).__name__}"
-        )
+        raise ResourceTagsError(f"{where}: must be a dict[str, str], got {type(tags).__name__}")
     for k, v in tags.items():
         if not isinstance(k, str) or not k:
-            raise ResourceTagsError(
-                f"{where}: tag keys must be non-empty strings, got {k!r}"
-            )
+            raise ResourceTagsError(f"{where}: tag keys must be non-empty strings, got {k!r}")
         if len(k) > _MAX_KEY_LEN:
             raise ResourceTagsError(
-                f"{where}: tag key {k!r} exceeds {_MAX_KEY_LEN} chars "
-                f"(got {len(k)})"
+                f"{where}: tag key {k!r} exceeds {_MAX_KEY_LEN} chars (got {len(k)})"
             )
         if k.lower().startswith(_RESERVED_PREFIX):
             raise ResourceTagsError(
@@ -74,9 +69,7 @@ def validate_resource_tags(tags: Any, *, where: str) -> None:
                 f"prefix (AWS-internal). Choose a different key."
             )
         if not isinstance(v, str):
-            raise ResourceTagsError(
-                f"{where}: tag values must be strings, got {v!r} for key {k!r}"
-            )
+            raise ResourceTagsError(f"{where}: tag values must be strings, got {v!r} for key {k!r}")
         if not v:
             raise ResourceTagsError(
                 f"{where}: tag value for key {k!r} is empty; AWS accepts "
@@ -84,8 +77,7 @@ def validate_resource_tags(tags: Any, *, where: str) -> None:
             )
         if len(v) > _MAX_VALUE_LEN:
             raise ResourceTagsError(
-                f"{where}: tag value for key {k!r} exceeds {_MAX_VALUE_LEN} "
-                f"chars (got {len(v)})"
+                f"{where}: tag value for key {k!r} exceeds {_MAX_VALUE_LEN} chars (got {len(v)})"
             )
 
 
@@ -201,9 +193,7 @@ def make_glue_tag_sync_callback(
 
             current = client.get_tags(ResourceArn=arn).get("Tags", {}) or {}
 
-            to_add = {
-                k: v for k, v in resource_tags.items() if current.get(k) != v
-            }
+            to_add = {k: v for k, v in resource_tags.items() if current.get(k) != v}
             to_remove = [k for k in current if k not in resource_tags]
 
             if to_add:

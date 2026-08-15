@@ -216,24 +216,24 @@ def build_and_upload_project_archive(
     boto3_session: Any | None = None,
 ) -> str:
     """Build the archive (idempotent via :func:`build_project_archive`)
-    then upload it to S3 (idempotent via HEAD). Returns the S3 URI.
+        then upload it to S3 (idempotent via HEAD). Returns the S3 URI.
 
-    Safe to call on every DAG-parse heartbeat -- both steps are
-    content-hash-keyed and skip when the content is unchanged.
+        Safe to call on every DAG-parse heartbeat -- both steps are
+        content-hash-keyed and skip when the content is unchanged.
 
-    Args:
-        run_dbt_deps: default ``False``. When set, runs
-            ``dbt deps`` in ``project_dir`` on the AIRFLOW box before
-            archiving so external dbt packages (``dbt_utils``,
-            ``dbt_expectations``, …) land in ``dbt_packages/`` and
-            ship to workers as part of the archive. Most users leave
-            this ``False`` -- workers install dbt packages themselves
-            via the runner-level ``with_deps`` flag (default ``True``
-), which keeps MWAA's ``requirements.txt`` lean
-            and avoids parse-time races. See
-            :func:`build_project_archive` for the full skip-path
-            behaviour when this is enabled.
-        (rest of kwargs documented on :func:`build_project_archive`).
+        Args:
+            run_dbt_deps: default ``False``. When set, runs
+                ``dbt deps`` in ``project_dir`` on the AIRFLOW box before
+                archiving so external dbt packages (``dbt_utils``,
+                ``dbt_expectations``, …) land in ``dbt_packages/`` and
+                ship to workers as part of the archive. Most users leave
+                this ``False`` -- workers install dbt packages themselves
+                via the runner-level ``with_deps`` flag (default ``True``
+    ), which keeps MWAA's ``requirements.txt`` lean
+                and avoids parse-time races. See
+                :func:`build_project_archive` for the full skip-path
+                behaviour when this is enabled.
+            (rest of kwargs documented on :func:`build_project_archive`).
     """
     from dbt_aws.common.archive.archive import build_project_archive
 

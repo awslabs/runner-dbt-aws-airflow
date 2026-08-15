@@ -148,9 +148,7 @@ def write_openlineage_yml(
     }
     if smus_domain_id:
         if not smus_region:
-            raise ValueError(
-                "write_openlineage_yml: smus_domain_id set but smus_region is None"
-            )
+            raise ValueError("write_openlineage_yml: smus_domain_id set but smus_region is None")
         transports["smus"] = {
             # Fully-qualified path of the class we drop into the
             # project dir. ``sys.path[0]`` is set to that dir on the

@@ -104,7 +104,13 @@ jobs:
           fi
 
       - name: Build distributions
-        run: uv build
+        # Wheel-only. sdist is intentionally skipped: hatchling's
+        # ``[tool.hatch.build.targets.wheel.force-include]`` pulls
+        # ``site/`` into the wheel, but the sdist tarball does not
+        # ship ``site/``, so building sdist->wheel raises
+        # ``FileNotFoundError: Forced include not found: .../site``.
+        # PyPI accepts wheel-only publishes for pure-Python projects.
+        run: uv build --wheel
 
       - name: Wheel smoke test
         uses: ./.github/actions/wheel-smoke

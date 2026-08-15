@@ -331,12 +331,8 @@ class EmrServerlessRunner(Runner):
         # AWS resource tags -- validated at DAG-parse; folded into the
         # ``create_application`` call at task-build time (see
         # ``_apply_create_application_kwargs``).
-        validate_resource_tags(
-            resource_tags, where="EmrServerlessRunner.resource_tags"
-        )
-        self.resource_tags: dict[str, str] | None = (
-            dict(resource_tags) if resource_tags else None
-        )
+        validate_resource_tags(resource_tags, where="EmrServerlessRunner.resource_tags")
+        self.resource_tags: dict[str, str] | None = dict(resource_tags) if resource_tags else None
 
         self.driver_cores = driver_cores
         self.driver_memory = driver_memory

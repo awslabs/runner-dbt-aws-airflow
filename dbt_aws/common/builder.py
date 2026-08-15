@@ -267,12 +267,8 @@ class DbtDag(DAG):
             if config is not None and config.all_override_fields
             else None
         )
-        all_override_group_spec = (
-            config.all_override_group_spec if config is not None else None
-        )
-        all_override_name_prefix = (
-            config.all_override_name_prefix if config is not None else None
-        )
+        all_override_group_spec = config.all_override_group_spec if config is not None else None
+        all_override_name_prefix = config.all_override_name_prefix if config is not None else None
 
         runners_dict, default_name = _normalise_runners(
             runner=runner, runners=runners, default_runner=default_runner
@@ -441,12 +437,8 @@ class DbtTaskGroup(TaskGroup):
             if config is not None and config.all_override_fields
             else None
         )
-        all_override_group_spec = (
-            config.all_override_group_spec if config is not None else None
-        )
-        all_override_name_prefix = (
-            config.all_override_name_prefix if config is not None else None
-        )
+        all_override_group_spec = config.all_override_group_spec if config is not None else None
+        all_override_name_prefix = config.all_override_name_prefix if config is not None else None
 
         runners_dict, default_name = _normalise_runners(
             runner=runner, runners=runners, default_runner=default_runner
@@ -601,11 +593,7 @@ def _apply_config_defaults(
         # downstream normaliser produces one canonical
         # ``{tag: TagGroupSpec}`` regardless of source.
         tag_groups = {
-            tag: (
-                {"name": spec.name, **spec.overrides}
-                if spec.overrides
-                else spec.name
-            )
+            tag: ({"name": spec.name, **spec.overrides} if spec.overrides else spec.name)
             for tag, spec in config.tag_group_specs.items()
         }
     if task_groups is None and config.task_groups is not None:
@@ -810,9 +798,7 @@ def _normalise_tag_map(
             if not isinstance(key, str) or not key.strip():
                 raise ValueError(f"{kind} keys must be non-empty strings, got {key!r}")
             if not isinstance(value, str) or not value:
-                raise ValueError(
-                    f"{kind}[{key!r}] must be a {value_label} string, got {value!r}"
-                )
+                raise ValueError(f"{kind}[{key!r}] must be a {value_label} string, got {value!r}")
             for tag in _split_csv(key):
                 _record(tag, value, where=f"{kind}[{key!r}]")
 
@@ -835,23 +821,18 @@ def _normalise_tag_map(
                 tag_list = []
                 for t in tags_raw:
                     if not isinstance(t, str):
-                        raise ValueError(
-                            f"{kind}[{i}].tags entries must be strings, got {t!r}"
-                        )
+                        raise ValueError(f"{kind}[{i}].tags entries must be strings, got {t!r}")
                     tag_list.extend(_split_csv(t))
             else:
                 raise ValueError(
-                    f"{kind}[{i}].tags must be a list or csv string, "
-                    f"got {type(tags_raw).__name__}"
+                    f"{kind}[{i}].tags must be a list or csv string, got {type(tags_raw).__name__}"
                 )
             if not tag_list:
                 raise ValueError(f"{kind}[{i}].tags must contain at least one tag")
             for tag in tag_list:
                 _record(tag, entry_value, where=f"{kind}[{i}]")
     else:
-        raise ValueError(
-            f"{kind} must be a dict, a list, or None; got {type(tag_map).__name__}"
-        )
+        raise ValueError(f"{kind} must be a dict, a list, or None; got {type(tag_map).__name__}")
 
     return flat
 
@@ -969,9 +950,7 @@ def _normalise_tag_groups(
                 tag_list = []
                 for t in tags_raw:
                     if not isinstance(t, str):
-                        raise ValueError(
-                            f"tag_groups[{i}].tags entries must be strings, got {t!r}"
-                        )
+                        raise ValueError(f"tag_groups[{i}].tags entries must be strings, got {t!r}")
                     tag_list.extend(_split_csv(t))
             else:
                 raise ValueError(
@@ -1046,9 +1025,7 @@ def _log_tag_groups_distribution(
                 if g.group_id_override == name or g.group_id_override.startswith(name + "__"):
                     produced_names.add(name)
                     break
-        elif g.is_singleton and any(
-            t in tag_groups for t in (g.leader.tags or [])
-        ):
+        elif g.is_singleton and any(t in tag_groups for t in (g.leader.tags or [])):
             # Singleton that has a tag_groups tag but wasn't merged -> pulled out.
             pulled_out.append(g.leader.unique_id)
             # A pulled-out node still counts as "the spec produced
@@ -1274,9 +1251,7 @@ def _attach_tasks(
     # ``overrides[uid][field]`` (would be a no-op) nor when the value
     # is ``None`` (nothing to inject). The rewrite is scoped to a
     # local dict so caller-supplied ``overrides`` stays untouched.
-    effective_overrides: dict[str, dict[str, Any]] = {
-        uid: dict(v) for uid, v in overrides.items()
-    }
+    effective_overrides: dict[str, dict[str, Any]] = {uid: dict(v) for uid, v in overrides.items()}
     for uid, value in node_to_profile.items():
         if value is not None:
             effective_overrides.setdefault(uid, {}).setdefault("profile_name", value)
@@ -1319,6 +1294,7 @@ def _attach_tasks(
         tag_runners=tag_runners or {},
         graph=graph,
     )
+
     def _runner_profile(uid: str) -> str | None:
         return getattr(runners[node_to_runner[uid]], "profile_name", None)
 
@@ -1382,8 +1358,7 @@ def _attach_tasks(
         from dataclasses import replace as _dc_replace
 
         graph_for_collapse = DbtGraph.from_nodes(
-            _dc_replace(node, tags=[*(node.tags or []), _ALL_SYNTHETIC_TAG])
-            for node in graph
+            _dc_replace(node, tags=[*(node.tags or []), _ALL_SYNTHETIC_TAG]) for node in graph
         )
     collapsed = collapse_graph(
         graph_for_collapse,
@@ -1492,15 +1467,9 @@ def _attach_tasks(
         teardown = selected.make_teardown_task(dag=dag, airflow_kwargs=airflow_kwargs_per_task)
         if setup is not None or teardown is not None:
             subset_gids = {g.group_id for g in subset}
-            roots = [
-                tasks[g.group_id]
-                for g in subset
-                if not (g.upstream_group_ids & subset_gids)
-            ]
+            roots = [tasks[g.group_id] for g in subset if not (g.upstream_group_ids & subset_gids)]
             leaves = [
-                tasks[g.group_id]
-                for g in subset
-                if not (g.downstream_group_ids & subset_gids)
+                tasks[g.group_id] for g in subset if not (g.downstream_group_ids & subset_gids)
             ]
             if setup is not None:
                 for root in roots:
@@ -1830,11 +1799,7 @@ def _resolve_node_runners(
                 tag_runner = next(iter(distinct))
 
         chosen = (
-            layer_b_runner
-            or layer_a_runner
-            or tag_runner
-            or all_layer_runner
-            or default_runner
+            layer_b_runner or layer_a_runner or tag_runner or all_layer_runner or default_runner
         )
         if chosen not in runners:
             raise ValueError(

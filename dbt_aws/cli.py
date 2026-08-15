@@ -74,9 +74,7 @@ def _pick_free_port(preferred: int) -> int:
                 return port
             except OSError:
                 port += 1
-    raise RuntimeError(
-        f"could not find a free port in [{preferred}, {preferred + 100})"
-    )
+    raise RuntimeError(f"could not find a free port in [{preferred}, {preferred + 100})")
 
 
 def _serve_docs(host: str, port: int, open_browser: bool) -> int:

@@ -297,12 +297,8 @@ class GluePythonShellRunner(Runner):
 
         # AWS resource tags -- validated at DAG-parse; folded into
         # create_job_kwargs["Tags"] in ``_build_create_job_kwargs``.
-        validate_resource_tags(
-            resource_tags, where="GluePythonShellRunner.resource_tags"
-        )
-        self.resource_tags: dict[str, str] | None = (
-            dict(resource_tags) if resource_tags else None
-        )
+        validate_resource_tags(resource_tags, where="GluePythonShellRunner.resource_tags")
+        self.resource_tags: dict[str, str] | None = dict(resource_tags) if resource_tags else None
 
         self.max_capacity = max_capacity
         self.timeout_minutes = timeout_minutes
@@ -385,11 +381,7 @@ class GluePythonShellRunner(Runner):
         )
         eff_mode = effective(self, ov, "mode")
         eff_iam_role_name = effective(self, ov, "iam_role_name")
-        if (
-            eff_mode == "create"
-            and self.script_location is None
-            and self.deploy_bucket is not None
-        ):
+        if eff_mode == "create" and self.script_location is None and self.deploy_bucket is not None:
             self._resolve_script_location()
         eff_script_location = effective(self, ov, "script_location")
 
@@ -505,9 +497,7 @@ class GluePythonShellRunner(Runner):
         #
         # shallow-merge runner-level tags with any per-node /
         # per-tag ``resource_tags`` override.
-        eff_resource_tags = merge_resource_tags(
-            self.resource_tags, override.resource_tags
-        )
+        eff_resource_tags = merge_resource_tags(self.resource_tags, override.resource_tags)
         if eff_resource_tags:
             validate_resource_tags(
                 eff_resource_tags,

@@ -651,12 +651,8 @@ class GlueInteractiveSessionRunner(Runner):
         self.session_id_prefix = session_id_prefix
         self.additional_python_modules = additional_python_modules
         self.default_arguments = dict(default_arguments or {})
-        validate_resource_tags(
-            resource_tags, where="GlueInteractiveSessionRunner.resource_tags"
-        )
-        self.resource_tags: dict[str, str] | None = (
-            dict(resource_tags) if resource_tags else None
-        )
+        validate_resource_tags(resource_tags, where="GlueInteractiveSessionRunner.resource_tags")
+        self.resource_tags: dict[str, str] | None = dict(resource_tags) if resource_tags else None
         self.glue_version = glue_version
         self.worker_type = worker_type
         self.number_of_workers = number_of_workers

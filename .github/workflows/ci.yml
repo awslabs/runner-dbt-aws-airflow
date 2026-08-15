@@ -90,7 +90,9 @@ jobs:
         run: uv run --python 3.12 mkdocs build --strict
 
       - name: Build wheel + sdist
-        run: uv build
+        # Wheel only -- sdist skipped because it doesn't ship ``site/``
+        # which hatchling force-includes into the wheel.
+        run: uv build --wheel
 
       - name: Wheel smoke test
         uses: ./.github/actions/wheel-smoke

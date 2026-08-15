@@ -348,28 +348,20 @@ class GlueSparkRunner(Runner):
 
         # AWS resource tags -- validated at DAG-parse; folded into
         # create_job_kwargs["Tags"] in ``_build_create_job_kwargs``.
-        validate_resource_tags(
-            resource_tags, where="GlueSparkRunner.resource_tags"
-        )
-        self.resource_tags: dict[str, str] | None = (
-            dict(resource_tags) if resource_tags else None
-        )
+        validate_resource_tags(resource_tags, where="GlueSparkRunner.resource_tags")
+        self.resource_tags: dict[str, str] | None = dict(resource_tags) if resource_tags else None
 
         # Spark conf -- validated at DAG-parse; folded into
         # ``DefaultArguments['--conf']`` (runner-level default) and
         # ``run_job_kwargs['Arguments']['--conf']`` (per-JobRun override,
         # populated per-model in ``make_task``).
         _validate_spark_conf(spark_conf, where="GlueSparkRunner.spark_conf")
-        self.spark_conf: dict[str, str] | None = (
-            dict(spark_conf) if spark_conf else None
-        )
+        self.spark_conf: dict[str, str] | None = dict(spark_conf) if spark_conf else None
 
         # Spark conf replace-mode. Same validation, same materialisation
         # point; the merger consults this AFTER building the merged
         # spark_conf and replaces the whole dict when set.
-        _validate_spark_conf(
-            spark_conf_replace, where="GlueSparkRunner.spark_conf_replace"
-        )
+        _validate_spark_conf(spark_conf_replace, where="GlueSparkRunner.spark_conf_replace")
         self.spark_conf_replace: dict[str, str] | None = (
             dict(spark_conf_replace) if spark_conf_replace else None
         )
@@ -564,10 +556,7 @@ class GlueSparkRunner(Runner):
         # replace-mode want a totally different profile).
         eff_spark_conf = _resolve_effective_spark_conf(runner=self, override=ov)
         if eff_spark_conf:
-            replace_mode = (
-                ov.spark_conf_replace is not None
-                or self.spark_conf_replace is not None
-            )
+            replace_mode = ov.spark_conf_replace is not None or self.spark_conf_replace is not None
             if not replace_mode:
                 # Parse the caller-supplied Job-level ``--conf`` string
                 # (JVM-start registrations) and merge under the runtime
@@ -755,9 +744,7 @@ class GlueSparkRunner(Runner):
         # shallow-merge runner-level tags with any per-node /
         # per-tag ``resource_tags`` override. Runner tags provide the
         # baseline; overrides add or replace per key.
-        eff_resource_tags = merge_resource_tags(
-            self.resource_tags, override.resource_tags
-        )
+        eff_resource_tags = merge_resource_tags(self.resource_tags, override.resource_tags)
         if eff_resource_tags:
             validate_resource_tags(
                 eff_resource_tags,
@@ -922,14 +909,10 @@ def _validate_spark_conf(conf: Any, *, where: str) -> None:
     if conf is None:
         return
     if not isinstance(conf, dict):
-        raise ValueError(
-            f"{where}: must be a dict[str, str], got {type(conf).__name__}"
-        )
+        raise ValueError(f"{where}: must be a dict[str, str], got {type(conf).__name__}")
     for k, v in conf.items():
         if not isinstance(k, str) or not k:
-            raise ValueError(
-                f"{where}: spark_conf keys must be non-empty strings, got {k!r}"
-            )
+            raise ValueError(f"{where}: spark_conf keys must be non-empty strings, got {k!r}")
         if k.startswith("--conf"):
             raise ValueError(
                 f"{where}: spark_conf key {k!r} must not include the"

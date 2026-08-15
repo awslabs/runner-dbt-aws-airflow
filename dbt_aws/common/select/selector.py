@@ -120,9 +120,7 @@ def parse_selector(expression: str) -> _Selector:
             body_type = kind
             value = body[len(marker) :].strip()
             if not value:
-                raise SelectorError(
-                    f"selector {expression!r} has an empty {prefix} value"
-                )
+                raise SelectorError(f"selector {expression!r} has an empty {prefix} value")
             body = value
             break
 

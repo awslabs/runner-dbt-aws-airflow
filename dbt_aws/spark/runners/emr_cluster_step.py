@@ -126,14 +126,30 @@ EmrStepActionOnFailure = Literal[
 _JOB_FLOW_WAITING_ACCEPTORS: list[dict[str, str]] = [
     # -- original state-based acceptors (must stay in sync with the
     #    stock ``job_flow_waiting`` waiter in providers-amazon)
-    {"matcher": "path", "argument": "Cluster.Status.State",
-     "expected": "WAITING", "state": "success"},
-    {"matcher": "path", "argument": "Cluster.Status.State",
-     "expected": "RUNNING", "state": "success"},
-    {"matcher": "path", "argument": "Cluster.Status.State",
-     "expected": "TERMINATED", "state": "success"},
-    {"matcher": "path", "argument": "Cluster.Status.State",
-     "expected": "TERMINATED_WITH_ERRORS", "state": "failure"},
+    {
+        "matcher": "path",
+        "argument": "Cluster.Status.State",
+        "expected": "WAITING",
+        "state": "success",
+    },
+    {
+        "matcher": "path",
+        "argument": "Cluster.Status.State",
+        "expected": "RUNNING",
+        "state": "success",
+    },
+    {
+        "matcher": "path",
+        "argument": "Cluster.Status.State",
+        "expected": "TERMINATED",
+        "state": "success",
+    },
+    {
+        "matcher": "path",
+        "argument": "Cluster.Status.State",
+        "expected": "TERMINATED_WITH_ERRORS",
+        "state": "failure",
+    },
     # -- new error acceptor: eventual-consistency retry.
     #
     # NOTE: Airflow's custom-waiter loader
@@ -144,8 +160,7 @@ _JOB_FLOW_WAITING_ACCEPTORS: list[dict[str, str]] = [
     # field on. Missing the field raises ``KeyError: 'argument'``
     # in the Triggerer and fails the task. We include an empty
     # ``argument`` here so the Jinja render is a no-op.
-    {"matcher": "error", "argument": "",
-     "expected": "InvalidRequestException", "state": "retry"},
+    {"matcher": "error", "argument": "", "expected": "InvalidRequestException", "state": "retry"},
 ]
 
 
@@ -267,9 +282,7 @@ if _EmrCreateJobFlowOperator is not None:
                     waiter_max_attempts=self.waiter_max_attempts,
                 ),
                 method_name="execute_complete",
-                timeout=timedelta(
-                    seconds=self.waiter_max_attempts * self.waiter_delay + 60
-                ),
+                timeout=timedelta(seconds=self.waiter_max_attempts * self.waiter_delay + 60),
             )
 
 
@@ -553,12 +566,8 @@ class EmrClusterStepRunner(Runner):
         # RunJobFlow expects). Caller-supplied Tags list merges on top
         # per-Key so the caller can override individual entries without
         # discarding the runner-level ``resource_tags=``.
-        validate_resource_tags(
-            resource_tags, where="EmrClusterStepRunner.resource_tags"
-        )
-        self.resource_tags: dict[str, str] | None = (
-            dict(resource_tags) if resource_tags else None
-        )
+        validate_resource_tags(resource_tags, where="EmrClusterStepRunner.resource_tags")
+        self.resource_tags: dict[str, str] | None = dict(resource_tags) if resource_tags else None
         merged_jfo = dict(job_flow_overrides or {})
         if self.resource_tags:
             # Build ``{Key: {Key, Value}}`` starting from resource_tags

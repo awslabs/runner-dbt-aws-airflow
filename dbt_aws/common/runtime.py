@@ -359,11 +359,7 @@ def _build_dbt_argv(
             delete=False,
             encoding="utf-8",
         ) as wf:
-            wf.write(
-                "import sys\n"
-                "from openlineage.dbt import main\n"
-                "sys.exit(main() or 0)\n"
-            )
+            wf.write("import sys\nfrom openlineage.dbt import main\nsys.exit(main() or 0)\n")
             wrapper = Path(wf.name)
         launcher: list[str] = [sys.executable, str(wrapper)]
     else:
@@ -472,8 +468,7 @@ def _export_aws_creds_to_env() -> None:
     if frozen.token:
         os.environ["AWS_SESSION_TOKEN"] = frozen.token
     _log.info(
-        "runner: exported OIDC-derived AWS creds as env vars for "
-        "duckdb-httpfs (session token: %s)",
+        "runner: exported OIDC-derived AWS creds as env vars for duckdb-httpfs (session token: %s)",
         "yes" if frozen.token else "no",
     )
 
@@ -1010,9 +1005,7 @@ def run_one_node(
                 ol_smus_domain or "(off)",
             )
         except Exception as exc:  # noqa: BLE001 -- lineage setup must not fail dbt
-            _log.warning(
-                "openlineage (in-session): setup failed, running without lineage: %s", exc
-            )
+            _log.warning("openlineage (in-session): setup failed, running without lineage: %s", exc)
             ol_events_path = None
 
     dbt_argv: list[str] = [
@@ -1058,11 +1051,7 @@ def run_one_node(
             delete=False,
             encoding="utf-8",
         ) as wf:
-            wf.write(
-                "import sys\n"
-                "from openlineage.dbt import main\n"
-                "sys.exit(main() or 0)\n"
-            )
+            wf.write("import sys\nfrom openlineage.dbt import main\nsys.exit(main() or 0)\n")
             wrapper = Path(wf.name)
         try:
             with open(os.devnull, "w") as _null:

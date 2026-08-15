@@ -222,9 +222,7 @@ def fingerprint_project(
         # streamed 1MB at a time to bound peak memory even on large
         # seeds / manifests.
         items_ch: list[tuple[str, int, str]] = []
-        for src, archive_relpath in _iter_source_files(
-            project, include_profiles=include_profiles
-        ):
+        for src, archive_relpath in _iter_source_files(project, include_profiles=include_profiles):
             content_hasher = hashlib.sha256()
             size = 0
             with src.open("rb") as fh:

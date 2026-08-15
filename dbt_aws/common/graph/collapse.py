@@ -117,9 +117,7 @@ class NodeGroup:
     #: Excluded from ``eq`` / ``hash`` so ``NodeGroup`` stays hashable
     #: -- the dict itself is used only by the builder to merge into
     #: ``effective_overrides[leader.unique_id]``.
-    group_config: dict[str, Any] = field(
-        default_factory=dict, hash=False, compare=False
-    )
+    group_config: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)
     #: Optional explicit group id (used for ``tag_groups`` where the
     #: user picks the task name via the ``name:`` field of the rich
     #: form or the value of the simple form). When set, this replaces
@@ -180,9 +178,7 @@ class CollapsedGraph:
             seen_ids.add(g.group_id)
             for m in g.members:
                 if m.unique_id in seen_members:
-                    raise ValueError(
-                        f"node {m.unique_id!r} present in more than one group"
-                    )
+                    raise ValueError(f"node {m.unique_id!r} present in more than one group")
                 seen_members.add(m.unique_id)
 
     def __iter__(self):
@@ -273,6 +269,7 @@ def collapse_graph(
         if runner_for_node is None:
             same_runner = lambda _a, _b: True  # noqa: E731 -- terse local
         else:
+
             def _same_runner_impl(a: DbtNode, b: DbtNode) -> bool:
                 return runner_for_node(a) == runner_for_node(b)
 
@@ -629,9 +626,7 @@ def _merge_by_tag_groups(
         bucket_set = set(uids)
         cycle_risk = _bucket_creates_cycle(bucket_set, graph)
 
-        partitions = (
-            [uids] if not cycle_risk else _split_into_connected_components(uids, graph)
-        )
+        partitions = [uids] if not cycle_risk else _split_into_connected_components(uids, graph)
 
         spec = next(iter(_matched_specs(groups[gid_list[0]].leader)))
         for component_idx, comp_uids in enumerate(partitions):

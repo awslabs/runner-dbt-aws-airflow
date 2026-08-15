@@ -731,9 +731,7 @@ def _build_openlineage_config(
     try:
         return OpenLineageConfig(**section)
     except (TypeError, ValueError) as exc:
-        raise RunnerConfigError(
-            f"{path}: {where}: invalid openlineage config: {exc}"
-        ) from exc
+        raise RunnerConfigError(f"{path}: {where}: invalid openlineage config: {exc}") from exc
 
 
 def _apply_top_level_openlineage(
@@ -784,8 +782,7 @@ def _apply_top_level_openlineage(
             object.__setattr__(runner, "openlineage", cfg)
         except Exception as exc:  # noqa: BLE001 -- defensive
             raise RunnerConfigError(
-                f"{path}: cannot inject top-level openlineage into "
-                f"runner {name!r}: {exc}"
+                f"{path}: cannot inject top-level openlineage into runner {name!r}: {exc}"
             ) from exc
 
 
@@ -841,15 +838,12 @@ def _apply_top_level_resource_tags(
         merged: dict[str, str] = {**section, **runner_tags}
         # Runner keys win per-key; validate the merged dict again in
         # case somehow the merge produced a bad shape.
-        validate_resource_tags(
-            merged, where=f"{path}: resource_tags (merged for runner {name!r})"
-        )
+        validate_resource_tags(merged, where=f"{path}: resource_tags (merged for runner {name!r})")
         try:
             object.__setattr__(runner, "resource_tags", merged or None)
         except Exception as exc:  # noqa: BLE001 -- defensive
             raise RunnerConfigError(
-                f"{path}: cannot inject top-level resource_tags into "
-                f"runner {name!r}: {exc}"
+                f"{path}: cannot inject top-level resource_tags into runner {name!r}: {exc}"
             ) from exc
 
 
@@ -985,9 +979,7 @@ def _build_overrides(
         tag: str | None = None
         if is_all_entry:
             if all_fields is not None:
-                raise RunnerConfigError(
-                    f"{path}: overrides['all']: duplicate ``all:`` entry"
-                )
+                raise RunnerConfigError(f"{path}: overrides['all']: duplicate ``all:`` entry")
         elif is_tag_entry:
             tag = key[len("tag.") :].strip()
             if not tag:
@@ -1000,9 +992,7 @@ def _build_overrides(
                     f"not supported -- declare one entry per tag."
                 )
             if tag in per_tag_single or tag in group_specs:
-                raise RunnerConfigError(
-                    f"{path}: overrides[{key!r}]: duplicate tag entry"
-                )
+                raise RunnerConfigError(f"{path}: overrides[{key!r}]: duplicate tag entry")
         else:
             # Per-node entry -- must be a proper dbt ``unique_id``.
             # The resource-type prefix is mandatory to
@@ -1016,9 +1006,7 @@ def _build_overrides(
                     f"for bulk-by-tag. Example: ``model.my_project.orders``."
                 )
             if key in per_node:
-                raise RunnerConfigError(
-                    f"{path}: overrides[{key!r}]: duplicate per-node entry"
-                )
+                raise RunnerConfigError(f"{path}: overrides[{key!r}]: duplicate per-node entry")
 
         # Peel off meta-keys (``mode``, ``name``) BEFORE OVERRIDE_TYPE
         # validation -- they are dbt-aws routing metadata, not runner
@@ -1088,9 +1076,7 @@ def _build_overrides(
         # Build the runner-facing entry (``runner:`` + validated
         # non-meta fields). This is what higher layers merge into the
         # per-node effective-override bucket.
-        runner_entry = {
-            k: v for k, v in fields_for_entry.items() if k not in _TAG_ENTRY_META_KEYS
-        }
+        runner_entry = {k: v for k, v in fields_for_entry.items() if k not in _TAG_ENTRY_META_KEYS}
 
         if is_all_entry:
             all_fields = runner_entry
@@ -1134,9 +1120,7 @@ def _build_overrides(
 #: ``analysis`` for completeness -- ``source``, ``operation``,
 #: ``macro``, ``exposure``, ``metric`` are metadata-only and never
 #: become tasks, so overrides against them are rejected.
-_VALID_NODE_PREFIXES: frozenset[str] = frozenset(
-    {"model", "seed", "snapshot", "test", "analysis"}
-)
+_VALID_NODE_PREFIXES: frozenset[str] = frozenset({"model", "seed", "snapshot", "test", "analysis"})
 
 
 def _build_task_groups(
