@@ -154,7 +154,14 @@ jobs:
         # runs with ``contents: write``. The ``GITHUB_TOKEN`` is scoped
         # to this job's ``contents: write`` permission -- no PAT
         # required.
+        #
+        # ``--repo`` is passed explicitly because this job runs without
+        # a git working tree (only ``actions/download-artifact`` ran
+        # before this step, no ``actions/checkout``), so ``gh`` cannot
+        # infer the repo from an origin remote.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          gh release upload "${GITHUB_REF_NAME}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
