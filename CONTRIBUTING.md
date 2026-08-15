@@ -130,17 +130,16 @@ any secret store.
      - Builds the wheel + sdist (with mkdocs docs bundled).
      - Runs the wheel smoke test (via the inline
        `.github/actions/wheel-smoke` composite action).
-     - Publishes to **PyPI** via the `pypi` environment (OIDC trusted
-       publisher, `id-token: write`).
+     - Publishes to **PyPI** via the OIDC trusted publisher
+       (`id-token: write`, no API key needed).
      - Attaches the built artefacts to the GitHub Release.
 
 **Publishing to TestPyPI (pre-release smoke):**
 
 Run `.github/workflows/publish-testpypi.yml` from the Actions tab
-(`workflow_dispatch`). Same flow, targets TestPyPI's trusted
-publisher via the `testpypi` environment. Also fires automatically on
-every push to `main` (skipped if the current version already exists
-on TestPyPI).
+(`workflow_dispatch`). Same flow, targets TestPyPI's OIDC trusted
+publisher. Also fires automatically on every push to `main` (skipped
+if the current version already exists on TestPyPI).
 
 **Local / manual publish (fallback only):**
 
@@ -154,11 +153,13 @@ OIDC trusted publisher workflows in `.github/workflows/publish-*.yml`.
 
 - Register `awslabs/runner-dbt-aws-airflow` on PyPI as a
   [Trusted Publisher](https://docs.pypi.org/trusted-publishers/) with
-  workflow `publish-pypi.yml` and environment `pypi`.
-- Same on TestPyPI with workflow `publish-testpypi.yml` and
-  environment `testpypi`.
-- Create two GitHub Environments (`pypi`, `testpypi`) in repo
-  settings. Optionally require reviewer approval on `pypi`.
+  workflow `publish-pypi.yml`. Leave the `environment` field EMPTY --
+  the workflow does not attach a GitHub Environment. (If you later
+  want approval gates, register an environment name here AND add
+  `environment: <name>` to the `publish` job in
+  `publish-pypi.yml`, then create a matching GitHub Environment.)
+- Same on TestPyPI with workflow `publish-testpypi.yml`, environment
+  field empty.
 
 ## Real-AWS integration testing
 

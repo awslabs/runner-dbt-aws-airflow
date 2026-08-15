@@ -7,7 +7,12 @@
 #   owner:       awslabs
 #   repository:  runner-dbt-aws-airflow
 #   workflow:    publish-testpypi.yml
-#   environment: testpypi
+#   environment: (leave empty)
+#
+# The GitHub Environment field is intentionally NOT used -- TestPyPI's
+# OIDC subject match therefore does not require an environment claim,
+# and this workflow does not attach an ``environment:`` to the publish
+# job.
 #
 # Triggers:
 # * ``workflow_dispatch`` -- manual smoke of an in-progress branch.
@@ -76,9 +81,6 @@ jobs:
     name: publish to TestPyPI (OIDC)
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/project/runner-dbt-aws-airflow/
     permissions:
       id-token: write
 

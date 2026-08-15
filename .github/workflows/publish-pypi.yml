@@ -8,7 +8,15 @@
 #   owner:      awslabs
 #   repository: runner-dbt-aws-airflow
 #   workflow:   publish-pypi.yml
-#   environment: pypi   (must match ``environment:`` below)
+#   environment: (leave empty)
+#
+# The GitHub Environment field is intentionally NOT used -- PyPI's
+# OIDC subject match therefore does not require an environment claim,
+# and this workflow does not attach an ``environment:`` to the publish
+# job. To add approval gates later, add ``environment: pypi`` (or any
+# name) HERE and register the same name on PyPI's trusted-publisher
+# config, then create a GitHub Environment of that name with
+# ``Required reviewers`` protection.
 #
 # Release flow (see CONTRIBUTING.md "Release workflow"):
 #   1. Bump ``pyproject.toml`` version + ``dbt_aws/compat.py``
@@ -112,9 +120,6 @@ jobs:
     name: publish to PyPI (OIDC)
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/project/runner-dbt-aws-airflow/
     permissions:
       # OIDC token for PyPI's trusted publisher; no API key needed.
       id-token: write

@@ -1,6 +1,7 @@
 # runner-dbt-aws-airflow
 
 [![PyPI](https://img.shields.io/pypi/v/runner-dbt-aws-airflow?logo=pypi&logoColor=white)](https://pypi.org/project/runner-dbt-aws-airflow/)
+[![Docs](https://img.shields.io/badge/docs-github.io-blue?logo=readthedocs&logoColor=white)](https://awslabs.github.io/runner-dbt-aws-airflow/)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.9%2B%20%7C%203.x-017CEE?logo=apache-airflow&logoColor=white)](https://airflow.apache.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
@@ -16,9 +17,11 @@ worker-side dbt package installs so your Airflow deployment stays lean.
 > [PyPI](https://pypi.org/project/runner-dbt-aws-airflow/) for early
 > adopters and CI validation. Will stabilise around 1.0. Full
 > documentation (mkdocs book, per-runner constructor reference, MWAA
-> quickstart, troubleshooting) ships bundled in the released wheel —
-> run `runner-dbt-aws-airflow docs` after `pip install` for an offline
-> browser preview.
+> quickstart, troubleshooting) is hosted at
+> **[awslabs.github.io/runner-dbt-aws-airflow](https://awslabs.github.io/runner-dbt-aws-airflow/)**
+> and also ships bundled in the released wheel — run
+> `runner-dbt-aws-airflow docs` after `pip install` for the offline
+> copy.
 
 > **Python import path:** `import dbt_aws` (the internal namespace
 > package name is unchanged; only the PyPI distribution and console

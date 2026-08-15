@@ -5,6 +5,7 @@
 [![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.9%2B%20%7C%203.x-017CEE?logo=apache-airflow&logoColor=white)](https://airflow.apache.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![CI](https://github.com/awslabs/runner-dbt-aws-airflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/awslabs/runner-dbt-aws-airflow/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-github.io-blue?logo=readthedocs&logoColor=white)](https://awslabs.github.io/runner-dbt-aws-airflow/)
 [![mypy](https://img.shields.io/badge/mypy-strict%20clean-brightgreen)](#status)
 [![ruff](https://img.shields.io/badge/ruff-clean-brightgreen)](#status)
 
@@ -15,11 +16,15 @@ routing, task-collapse, OpenLineage emission, AWS resource-tag compliance,
 and **worker-side dbt package installs** so your Airflow deployment stays
 lean.
 
-> **Status:** pre-1.0. Published to [PyPI](https://pypi.org/project/runner-dbt-aws-airflow/)
-> for early adopters and CI validation. Full mkdocs book hosted at
-> **[pypi.org/project/runner-dbt-aws-airflow](https://pypi.org/project/runner-dbt-aws-airflow/)**
-> Published to PyPI
-> proper once the API stabilizes.
+> **Status:** pre-1.0. Published to
+> [PyPI](https://pypi.org/project/runner-dbt-aws-airflow/) for early
+> adopters and CI validation. Will stabilise around 1.0.
+>
+> **Docs:** full mkdocs book hosted at
+> **[awslabs.github.io/runner-dbt-aws-airflow](https://awslabs.github.io/runner-dbt-aws-airflow/)**
+> (rebuilt on every push to `main` via `.github/workflows/docs.yml`).
+> The same site ships bundled inside the wheel and is available
+> offline via `runner-dbt-aws-airflow docs`.
 ---
 
 ## Table of Contents
@@ -361,14 +366,18 @@ Cosmos-style `ProjectConfig`. Drop-in from Cosmos-based DAGs.
 
 ## Documentation
 
-Docs are bundled inside the released wheel and can be browsed offline:
+Full docs live at **<https://awslabs.github.io/runner-dbt-aws-airflow/>**
+(rebuilt on every push to `main`).
+
+The same site ships bundled inside the released wheel for offline
+viewing:
 
 ```bash
 pip install runner-dbt-aws-airflow
 runner-dbt-aws-airflow docs    # opens http://localhost:8000 with the bundled site
 ```
 
-Built from `docs/` via `mkdocs-material` on every push. Run locally:
+Built from `docs/` via `mkdocs-material`. Run locally:
 
 ```bash
 uv sync --group docs
@@ -377,17 +386,18 @@ uv run mkdocs serve      # http://localhost:8000
 
 | Topic | Page |
 |---|---|
-| First DAG in 5 minutes | [Getting started](docs/getting-started.md) |
-| Runner shapes | [Concepts → Runners](docs/concepts/runners.md) |
-| Routing (`overrides` / `tag.<name>` / `mode`) | [Concepts → Routing](docs/concepts/routing.md) |
-| Task-collapse | [Concepts → Task-collapse](docs/concepts/collapse.md) |
-| OpenLineage + SMUS | [Concepts → Lineage](docs/concepts/lineage.md) |
-| MWAA / VPC deployment | [Concepts → Deployment](docs/concepts/deployment.md) |
-| Every runner kwarg | [Reference → Runner constructors](docs/reference/runners.md) |
-| YAML config schema | [Reference → YAML config](docs/reference/runner-config-yaml.md) |
-| Per-model overrides | [Reference → Runner overrides](docs/reference/runner-overrides.md) |
-| DbtDag / DbtTaskGroup | [Reference → DbtDag](docs/reference/dbtdag.md) |
-| Package pins | [Reference → compat](docs/reference/compat.md) |
+| First DAG in 5 minutes | [Getting started](https://awslabs.github.io/runner-dbt-aws-airflow/getting-started/) |
+| Runner shapes | [Concepts → Runners](https://awslabs.github.io/runner-dbt-aws-airflow/concepts/runners/) |
+| Routing (`overrides` / `tag.<name>` / `mode`) | [Concepts → Routing](https://awslabs.github.io/runner-dbt-aws-airflow/concepts/routing/) |
+| Task-collapse | [Concepts → Task-collapse](https://awslabs.github.io/runner-dbt-aws-airflow/concepts/collapse/) |
+| OpenLineage + SMUS | [Concepts → Lineage](https://awslabs.github.io/runner-dbt-aws-airflow/concepts/lineage/) |
+| MWAA / VPC deployment | [Concepts → Deployment](https://awslabs.github.io/runner-dbt-aws-airflow/concepts/deployment/) |
+| Every runner kwarg | [Reference → Runner constructors](https://awslabs.github.io/runner-dbt-aws-airflow/reference/runners/) |
+| YAML config schema | [Reference → YAML config](https://awslabs.github.io/runner-dbt-aws-airflow/reference/runner-config-yaml/) |
+| Per-model overrides | [Reference → Runner overrides](https://awslabs.github.io/runner-dbt-aws-airflow/reference/runner-overrides/) |
+| DbtDag / DbtTaskGroup | [Reference → DbtDag](https://awslabs.github.io/runner-dbt-aws-airflow/reference/dbtdag/) |
+| Package pins | [Reference → compat](https://awslabs.github.io/runner-dbt-aws-airflow/reference/compat/) |
+| MWAA gotchas | [Troubleshooting](https://awslabs.github.io/runner-dbt-aws-airflow/troubleshooting/) |
 | MWAA gotchas | [Troubleshooting](docs/troubleshooting.md) |
 
 ## Repo layout
@@ -452,11 +462,10 @@ See [PyPI](https://pypi.org/project/runner-dbt-aws-airflow/) for release history
 
 Actively working on:
 
-- Full public docs site on GitHub Pages (built by
-  `.github/workflows/docs.yml`). Wheel-bundled docs served by
-  `runner-dbt-aws-airflow docs` remain the offline fallback.
+- Publishing the test suite (kept local for this initial drop).
 - Move from `Development Status :: 3 - Alpha` → Beta → 1.0 once the
-  real-AWS regression suite covers every runner end-to-end.
+  real-AWS regression suite is public and covers every runner
+  end-to-end.
 
 Have a feature request? Open an issue with your use case and current
 workaround.
