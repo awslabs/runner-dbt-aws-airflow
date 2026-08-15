@@ -54,7 +54,7 @@ from typing import Final
 #: ``.github/workflows/publish-pypi.yml`` -- the workflow asserts this
 #: constant equals ``pyproject.toml::project.version`` before
 #: publishing); update the pins below when this bumps.
-DBT_AWS_VERSION: Final[str] = "0.1.0"
+DBT_AWS_VERSION: Final[str] = "0.2.0"
 
 #: dbt-core version pinned for Python 3.10+ workers (Glue Spark Job,
 #: Glue Interactive Sessions, EMR-on-EC2, EMR Serverless). Latest stable
