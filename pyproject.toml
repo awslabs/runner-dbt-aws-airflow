@@ -1,0 +1,173 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "runner-dbt-aws-airflow"
+version = "0.1.0"
+description = "Run dbt projects on AWS via Airflow -- Glue Spark, Glue Python Shell, Glue Interactive Session runners with auto-deploy + multi-runner config."
+# ``readme`` points at README.pypi.md (the wheel's long_description,
+# rendered on PyPI). README.md is the repo landing page.
+readme = "README.pypi.md"
+# Python 3.9 is the floor because Glue Python Shell jobs (Glue 3.0)
+# ship Python 3.9 and pip rejects ``requires-python>=3.10`` packages
+# there. The runtime code uses ``from __future__ import annotations``
+# throughout, so 3.10+ type-hint syntax (``X | Y``, ``dict[str, T]``,
+# etc.) is lazy-evaluated and safe on 3.9.
+#
+# The dev dependency-group below pulls in apache-airflow (>=3.10 only),
+# but dependency-groups are opt-in for contributors -- end users
+# installing the wheel are unaffected.
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "dbt-aws contributors" }]
+keywords = ["dbt", "airflow", "aws", "glue", "emr"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+airflow = [
+    "apache-airflow>=2.9.0",
+    "apache-airflow-providers-amazon>=9.0.0",
+    "apache-airflow-providers-standard>=1.0.0",
+]
+worker = [
+    "boto3>=1.34",
+]
+# Optional: OpenLineage lineage emission via ``dbt-ol`` +
+# SageMaker Unified Studio (DataZone) ingest. Enable with
+# ``pip install 'runner-dbt-aws-airflow[lineage]'``. Purely additive -- the base
+# wheel installs and runs identically whether or not this extra is
+# present.
+lineage = [
+    "openlineage-python>=1.20,<2",
+    "openlineage-dbt>=1.20,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/awslabs/runner-dbt-aws-airflow"
+Repository = "https://github.com/awslabs/runner-dbt-aws-airflow"
+Issues = "https://github.com/awslabs/runner-dbt-aws-airflow/issues"
+
+[project.scripts]
+# Thin dispatcher -- currently only ``runner-dbt-aws-airflow docs`` (offline
+# HTML docs server). See ``dbt_aws.cli`` for details. The Python import
+# path stays ``dbt_aws`` (namespace package); only the distribution and
+# console-script name follow the awslabs repo naming.
+runner-dbt-aws-airflow = "dbt_aws.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dbt_aws"]
+
+# Include the pre-built docs site (``site/`` at the repo root, produced
+# by ``mkdocs build``) inside the wheel at ``dbt_aws/_docs/``. The
+# ``runner-dbt-aws-airflow docs`` CLI serves those files via stdlib
+# ``http.server``.
+#
+# ``site/.gitkeep`` is tracked (see .gitignore) so this force-include
+# resolves in fresh clones and CI before ``mkdocs build`` has run.
+# ``mkdocs build`` overwrites the directory contents on every real
+# build; the .gitkeep survives.
+[tool.hatch.build.targets.wheel.force-include]
+"site" = "dbt_aws/_docs"
+
+[tool.hatch.build.targets.sdist]
+include = ["dbt_aws", "README.pypi.md"]
+
+# uv resolver: restrict lockfile resolution to Python 3.10+ so dev
+# dependencies like apache-airflow==3.2.1 (which only supports >=3.10)
+# can co-exist with the wider ``requires-python = ">=3.9"`` floor on
+# the built wheel. End users installing the wheel are unaffected --
+# ``requires-python`` still lets Glue Python Shell (Py 3.9) install it.
+[tool.uv]
+environments = ["python_version >= '3.10'"]
+
+# Dev dependencies -- installed via ``uv sync`` into the local .venv so
+# contributors run tests, lint, mypy, and Airflow smoke DAGs against
+# the same toolchain. End users installing the wheel do NOT get these.
+# Note: the distribution is published as ``runner-dbt-aws-airflow`` on
+# PyPI. The Python import path stays ``dbt_aws`` for backward
+# compatibility across existing DAGs.
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pre-commit>=4.0",
+    "dbt-duckdb>=1.10.1",
+    "apache-airflow==3.2.1",
+    "apache-airflow-providers-standard>=1.15.0",
+    "rich>=13.9.4",
+    "apache-airflow-providers-amazon[aiobotocore]>=9.31.0",
+    "types-pyyaml>=6.0.12.20260518",
+    "psycopg2-binary>=2.9",
+    "asyncpg>=0.29",
+]
+# Documentation site (mkdocs-material book). Install with:
+#   uv sync --group docs
+# Serve locally with:
+#   uv run mkdocs serve
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+# PEP 420 namespace package: ``dbt_aws/`` has no ``__init__.py`` so we
+# tell mypy to treat the repo root as a module-search root and resolve
+# modules under the ``dbt_aws.<sub>`` namespace.
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "."
+files = ["dbt_aws"]
+strict_optional = true
+warn_unused_ignores = true
+
+# Third-party packages without bundled type stubs. mypy raises
+# ``import-untyped`` separately from ``import-not-found`` -- disable
+# the former for boto3 / botocore which we only use lazily at runtime.
+[[tool.mypy.overrides]]
+module = ["boto3", "boto3.*", "botocore", "botocore.*", "yaml"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+# OpenLineage packages are optional (installed via ``pip install
+# 'runner-dbt-aws-airflow[lineage]'``). ``dbt_aws.common.lineage``
+# imports them lazily inside the code paths that need them; when they
+# aren't installed the feature stays dormant. Silence mypy's
+# import-not-found here so a base dev install (no lineage extra)
+# type-checks cleanly.
+[[tool.mypy.overrides]]
+module = ["openlineage", "openlineage.*"]
+ignore_missing_imports = true
+
+# Airflow 2.x-only modules referenced by the Airflow 2/3 compat shim.
+# Under our locally-installed Airflow 3.2.1 these don't exist; the
+# shim catches ImportError at runtime, but mypy still tries to
+# statically resolve them and raises ``import-not-found``.
+[[tool.mypy.overrides]]
+module = ["airflow.utils.task_group", "airflow.models.dag"]
+ignore_missing_imports = true
+
+# NOTE: ``[tool.pytest.ini_options]`` block removed for the initial
+# public release -- the ``tests/`` directory is kept local. Re-add
+# once tests land in this repo.

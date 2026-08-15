@@ -1,0 +1,100 @@
+# Publish to TestPyPI (OIDC / trusted publisher).
+#
+# NO API TOKEN is stored anywhere. Publishing is authorised by GitHub
+# OIDC via TestPyPI's Trusted Publisher feature. Configure ONCE at:
+#   https://test.pypi.org/manage/project/runner-dbt-aws-airflow/settings/publishing/
+# with:
+#   owner:       awslabs
+#   repository:  runner-dbt-aws-airflow
+#   workflow:    publish-testpypi.yml
+#   environment: testpypi
+#
+# Triggers:
+# * ``workflow_dispatch`` -- manual smoke of an in-progress branch.
+# * ``push`` to ``main`` -- picks up every merged version bump. If the
+#   version already exists on TestPyPI the publish step is a no-op
+#   (``--skip-existing``).
+
+name: publish-testpypi
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+      - "dbt_aws/**"
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/publish-testpypi.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-testpypi
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build wheel + sdist
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install docs deps
+        run: uv sync --group docs --python 3.12
+
+      - name: Build docs (bundled into the wheel via hatchling force-include)
+        run: uv run --python 3.12 mkdocs build --strict
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Wheel smoke test
+        uses: ./.github/actions/wheel-smoke
+
+      - name: Upload dist artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 14
+
+  publish:
+    name: publish to TestPyPI (OIDC)
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/runner-dbt-aws-airflow/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download dist artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          # Merges to main may re-run this workflow without a version
+          # bump. Skip cleanly rather than failing.
+          skip-existing: true
+          verbose: true

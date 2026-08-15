@@ -1,0 +1,114 @@
+site_name: runner-dbt-aws-airflow
+site_description: >
+  Run dbt projects on AWS Glue (Spark Jobs, Interactive Sessions,
+  Python Shell) and EMR (Serverless, on-EC2) from Apache Airflow.
+  Multi-runner dispatch, tag-based routing, visual task groups,
+  declarative YAML config.
+# ``site_url`` is the canonical HTTPS URL where the docs live. The
+# offline wheel-bundled site (``runner-dbt-aws-airflow docs`` CLI) is
+# the primary distribution channel until GitHub Pages is enabled by
+# ``.github/workflows/docs.yml``. Update this URL when the Pages site
+# is published.
+site_url: https://awslabs.github.io/runner-dbt-aws-airflow/
+repo_name: awslabs/runner-dbt-aws-airflow
+repo_url: https://github.com/awslabs/runner-dbt-aws-airflow
+copyright: Copyright &copy; 2026 runner-dbt-aws-airflow contributors
+docs_dir: docs
+site_dir: site
+
+# Pages intentionally present in docs/ but not in the nav (e.g. legacy
+# redirect pages).
+not_in_nav: |
+  /USAGE.md
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Complete reference (YAML + Python): complete-reference.md
+  - Concepts:
+      - concepts/index.md
+      - Architecture: concepts/architecture.md
+      - Runners: concepts/runners.md
+      - Routing (tag_runners, overrides): concepts/routing.md
+      - Visual grouping (task_groups): concepts/visual-grouping.md
+      - Deployment helpers: concepts/deployment.md
+      - OpenLineage + SMUS: concepts/lineage.md
+      - Task-collapse (view_chain, drop_ephemeral): concepts/collapse.md
+  - Reference:
+      - reference/index.md
+      - Precedence ladder: reference/precedence.md
+      - Runner constructors: reference/runners.md
+      - DbtDag / DbtTaskGroup: reference/dbtdag.md
+      - Package-version reference: reference/compat.md
+      - YAML config: reference/runner-config-yaml.md
+      - Runner overrides: reference/runner-overrides.md
+      - 'Example: Spark conf (spark_conf vs --conf)': reference/examples/spark-conf-demo.md
+  - How-to:
+      - how-to/index.md
+      - Quickstart -- Glue Spark Job: how-to/quickstart-glue-spark.md
+      - Quickstart -- Glue Session: how-to/quickstart-glue-session.md
+      - Multi-runner mix: how-to/multi-runner-mix.md
+      - Route models by tag: how-to/route-by-tag.md
+      - Multi-profile / multi-target DAG: how-to/multi-profile-target.md
+      - Bulk-by-tag task collapse (`tag_groups`): how-to/tag-groups-bulk-collapse.md
+      - Visual groups in the UI: how-to/group-by-tag.md
+      - Enable OpenLineage on Glue Spark: how-to/enable-openlineage.md
+      - Collapse + Iceberg Materialized Views on Glue 5.1: how-to/collapse-iceberg-glue.md
+  - Examples: examples.md
+  - Troubleshooting: troubleshooting.md

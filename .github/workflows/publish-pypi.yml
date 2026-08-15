@@ -1,0 +1,149 @@
+# Publish to PyPI on GitHub Release publication (OIDC / trusted publisher).
+#
+# NO API TOKEN is stored anywhere. Publishing is authorised by
+# GitHub OIDC via PyPI's Trusted Publisher feature. Configure the
+# publisher on PyPI ONCE at:
+#   https://pypi.org/manage/project/runner-dbt-aws-airflow/settings/publishing/
+# with:
+#   owner:      awslabs
+#   repository: runner-dbt-aws-airflow
+#   workflow:   publish-pypi.yml
+#   environment: pypi   (must match ``environment:`` below)
+#
+# Release flow (see CONTRIBUTING.md "Release workflow"):
+#   1. Bump ``pyproject.toml`` version + ``dbt_aws/compat.py``
+#      DBT_AWS_VERSION together; merge to main.
+#   2. Create + push a tag ``vX.Y.Z``.
+#   3. Cut a GitHub Release for that tag ("Publish release").
+#      -> this workflow fires and pushes the wheel + sdist to PyPI.
+#
+# For pre-release smoke, use ``publish-testpypi.yml`` first.
+
+name: publish-pypi
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "publish" to confirm manual publication to PyPI'
+        required: true
+        default: 'no'
+
+concurrency:
+  group: publish-pypi
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build wheel + sdist
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Guard manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "${{ inputs.confirm }}" != "publish" ]]; then
+            echo "::error::Manual dispatch requires confirm='publish'."
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install docs deps
+        run: uv sync --group docs --python 3.12
+
+      - name: Build docs (bundled into the wheel via hatchling force-include)
+        run: uv run --python 3.12 mkdocs build --strict
+
+      - name: Assert version consistency (pyproject <-> compat)
+        run: |
+          set -euo pipefail
+          PYPROJECT_VER="$(python3 -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
+          # Read DBT_AWS_VERSION without importing the package (no need
+          # to install dbt_aws into the workspace .venv just for this).
+          COMPAT_VER="$(python3 -c 'import re, pathlib; src = pathlib.Path("dbt_aws/compat.py").read_text(); m = re.search(r"^DBT_AWS_VERSION[^=]*=\s*[\"\x27]([^\"\x27]+)[\"\x27]", src, re.MULTILINE); print(m.group(1) if m else "MISSING")')"
+          echo "pyproject=$PYPROJECT_VER  compat=$COMPAT_VER"
+          if [[ "$PYPROJECT_VER" != "$COMPAT_VER" ]]; then
+            echo "::error::Version mismatch: pyproject.toml ($PYPROJECT_VER) != dbt_aws/compat.py::DBT_AWS_VERSION ($COMPAT_VER). Bump both together."
+            exit 1
+          fi
+
+      - name: Assert release tag matches pyproject version
+        if: github.event_name == 'release'
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          PYPROJECT_VER="$(python3 -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')"
+          echo "tag=$TAG  pyproject=$PYPROJECT_VER"
+          if [[ "$TAG" != "$PYPROJECT_VER" ]]; then
+            echo "::error::Tag $TAG does not match pyproject version $PYPROJECT_VER."
+            exit 1
+          fi
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Wheel smoke test
+        uses: ./.github/actions/wheel-smoke
+
+      - name: Upload dist artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  publish:
+    name: publish to PyPI (OIDC)
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/runner-dbt-aws-airflow/
+    permissions:
+      # OIDC token for PyPI's trusted publisher; no API key needed.
+      id-token: write
+      # Attach artefacts to the GitHub Release.
+      contents: write
+
+    steps:
+      - name: Download dist artefacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # verbose is helpful when auditing the OIDC handshake in
+          # workflow logs; strip it after a few successful releases.
+          verbose: true
+
+      - name: Attach dist to GitHub Release
+        if: github.event_name == 'release'
+        # Use the pre-installed ``gh`` CLI rather than a third-party
+        # action, so we don't have to SHA-pin an external Action that
+        # runs with ``contents: write``. The ``GITHUB_TOKEN`` is scoped
+        # to this job's ``contents: write`` permission -- no PAT
+        # required.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
