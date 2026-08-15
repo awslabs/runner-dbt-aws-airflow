@@ -349,11 +349,20 @@ def _warn_if_profiles_yml_carries_secrets(project: Path) -> None:
         return
     hits = [p for p in _SECRET_PROFILE_PATTERNS if p in content]
     if hits:
-        _log.warning(
+        # ``hits`` contains PATTERN NAMES the grep matched (e.g.
+        # ``"password:"``), NOT the secret values that would follow
+        # those keys in ``profiles.yml``. Logging them tells operators
+        # which keys triggered the warning without disclosing the
+        # associated secret values (which never enter this function's
+        # scope -- only the lowercased haystack does, and it's dropped
+        # after the ``in`` check). CodeQL's ``py/clear-text-logging``
+        # rule fires here because the variable name pattern matches
+        # ``password``/``secret_key``/etc.; suppression is intentional.
+        _log.warning(  # lgtm[py/clear-text-logging-sensitive-data]
             "archive builder: ``include_profiles=True`` will ship "
             "``profiles.yml`` into the S3-uploaded archive AND it looks "
-            "like it carries static credentials (matched: %s). Anyone "
-            "with read access to the S3 bucket can extract them. "
+            "like it carries static credentials (matched pattern names: %s). "
+            "Anyone with read access to the S3 bucket can extract them. "
             "Consider one of:\n"
             "  * pass ``include_profiles=False`` and rely on IAM role "
             "auth on the worker;\n"
