@@ -285,9 +285,9 @@ def _pull_script_args(context: dict[str, Any]) -> dict[str, str]:
 #: env vars were set, just not which ones.
 _REDACTED_ARG_KEYS: frozenset[str] = frozenset(
     {
-        "--env-vars",  # JSON obj of env vars -- may hold DB passwords etc.
-        "--vars",  # dbt --vars JSON -- often contains secrets in real DAGs
-        "--dbt-extra-flags",  # user-supplied raw flags -- unknown shape
+        "--env-vars",
+        "--vars",
+        "--dbt-extra-flags",
     }
 )
 

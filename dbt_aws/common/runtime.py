@@ -786,7 +786,7 @@ def _warn_missing_s3_allowlist_once() -> None:
 #: credentials or otherwise sensitive data. Applied by
 #: :func:`_redact_dbt_argv` before ``dbt_argv`` is joined into a log
 #: string. ``--vars`` is the canonical case (dbt users routinely pass
-#: DB passwords / API tokens in ``--vars '{...}'``); ``--profiles-dir``
+#: sensitive values through ``--vars '{...}'``); ``--profiles-dir``
 #: is included because it can point at a directory containing
 #: ``profiles.yml`` with static credentials, and a copy-paste of the
 #: exec line would then be a hint at credential location.
