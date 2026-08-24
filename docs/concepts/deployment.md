@@ -361,14 +361,12 @@ from dbt_aws.compat import (
     GLUE_PY311_PACKAGES,       # Glue 5.0 Spark Job + Interactive Sessions
     GLUE_PY39_PACKAGES,        # Glue 3.0 Python Shell (has PyPI + duckdb GLIBC pin)
     EMR_CLUSTER_BOOTSTRAP_ARGS,  # EMR-on-EC2 bootstrap args
-    TESTPYPI_EXTRA_INDEX,
 )
 
 GlueSparkRunner(
     create_job_kwargs={
         "DefaultArguments": {
             "--additional-python-modules": GLUE_PY311_PACKAGES,
-            "--python-modules-installer-option": TESTPYPI_EXTRA_INDEX,
         },
     },
 )

@@ -12,7 +12,7 @@ Airflow.
 
 ## 1. Install
 
-The lib is published on PyPI (real PyPI publish coming):
+The lib is published on PyPI:
 
 ```bash
 pip install runner-dbt-aws-airflow
@@ -21,7 +21,7 @@ pip install runner-dbt-aws-airflow
 Or in a `uv`-managed project:
 
 ```bash
-uv add dbt-aws
+uv add runner-dbt-aws-airflow
 ```
 
 The Glue **workers** install the same wheel by passing the PyPI extra index URL
@@ -74,7 +74,7 @@ dag = DbtDag(
         deploy_prefix="dbt-aws",
         create_job_kwargs={
             "DefaultArguments": {
-                "--additional-python-modules": "dbt-aws,dbt-core==1.11.11,dbt-duckdb==1.10.1",
+                "--additional-python-modules": "runner-dbt-aws-airflow==1.0.0,dbt-core==1.11.11,dbt-duckdb==1.10.1",
                 "--job-language": "python",
             },
             "GlueVersion": "5.0",

@@ -74,3 +74,4 @@ logs/
 # not shipped here; if you copy them in locally, keep them out of git.
 /attic/
 /archive/
+_local_verify/

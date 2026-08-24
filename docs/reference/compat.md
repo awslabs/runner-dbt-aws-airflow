@@ -19,8 +19,7 @@ inside a DAG-parse hot path.
 | `DBT_CORE_VERSION_PY39` | dbt-core for Python 3.9 workers (Glue Python Shell 3.0). Pinned to a stable release to avoid a broken PyPI shadow copy. |
 | `DBT_DUCKDB_VERSION_PY39` | dbt-duckdb adapter for Python 3.9 workers. |
 | `DUCKDB_VERSION_PY39` | DuckDB for Python 3.9 workers. **Must** be pinned — DuckDB 1.3.0+ wheels require GLIBC_2.28 but Glue Python Shell 3.0 ships GLIBC_2.26 (Amazon Linux 2). See [duckdb#17943](https://github.com/duckdb/duckdb/issues/17943). |
-| `TESTPYPI_EXTRA_INDEX` | pip flag while `dbt-aws` is PyPI-only. Delete this once we ship to real PyPI. |
-| `DBT_AWS_WHEEL_S3_URI` | S3 URI template. `.format(bucket=..., version=...)`. |
+| `DBT_AWS_WHEEL_S3_URI` | S3 URI template for a self-hosted mirror of the wheel (Glue Python Shell fallback). `.format(bucket=..., version=...)`. |
 
 ## Ready-to-use install strings
 
@@ -29,8 +28,8 @@ module load with the default kwargs.
 
 | Constant | Where to plug in |
 | --- | --- |
-| `GLUE_PY311_PACKAGES` | `DefaultArguments["--additional-python-modules"]` on Glue 5.0 Spark Job. Pair with `"--python-modules-installer-option": TESTPYPI_EXTRA_INDEX`. |
-| `GLUE_PY39_PACKAGES` | `DefaultArguments["--additional-python-modules"]` on Glue 3.0 Python Shell. `--extra-index-url` is inlined per-package — don't add `--python-modules-installer-option` (it's silently ignored). |
+| `GLUE_PY311_PACKAGES` | `DefaultArguments["--additional-python-modules"]` on Glue 5.0 Spark Job. |
+| `GLUE_PY39_PACKAGES` | `DefaultArguments["--additional-python-modules"]` on Glue 3.0 Python Shell. Inline pip flags per-package; don't add `--python-modules-installer-option` (silently ignored on 3.0). |
 
 ## Helper functions
 
@@ -62,14 +61,13 @@ too old for the dbt-aws worker entry code.
 ### Frozen constants (recommended for most cases)
 
 ```python
-from dbt_aws.compat import GLUE_PY311_PACKAGES, TESTPYPI_EXTRA_INDEX
+from dbt_aws.compat import GLUE_PY311_PACKAGES
 
 runner = GlueSparkRunner(
     ...,
     create_job_kwargs={
         "DefaultArguments": {
             "--additional-python-modules": GLUE_PY311_PACKAGES,
-            "--python-modules-installer-option": TESTPYPI_EXTRA_INDEX,
         },
     },
 )
@@ -103,13 +101,41 @@ wheel_s3 = DBT_AWS_WHEEL_S3_URI.format(
 )
 ```
 
-## Bumping the pins
+## Compatibility matrix
 
-When we validate a new dbt-core / dbt-duckdb / duckdb combo on real AWS,
-we bump the constants here and re-run the internal `dag_test_*` example
-DAGs. If they pass, we ship the bump in the next `dbt-aws` release.
+Glue and EMR runtime versions map to different Python and Spark
+versions. The adapter you install (`dbt-spark`, `dbt-duckdb`,
+`dbt-athena`, ...) must be compatible with both. Recommendations
+below reflect what the maintainers verified end-to-end on real AWS.
 
-If you need to pin to a different set of versions for your own project,
-call the helper functions with keyword args — don't monkey-patch the
-constants (they're `Final` for a reason: the frozen `*_PACKAGES` strings
-are computed at import time and won't see later mutations).
+| Glue version | Python | Spark | Recommended dbt-core | Recommended adapter | Notes |
+|---|---|---|---|---|---|
+| **3.0** (Python Shell) | 3.9 | — | 1.9.10 | `dbt-duckdb==1.9.6` + `duckdb==1.2.2` | Only version supporting Glue Python Shell. GLIBC_2.26. |
+| 4.0 | 3.10 | 3.3 | 1.11.x | `dbt-spark==1.9.3` or `dbt-duckdb==1.10.1` | Previous default. |
+| **5.0** (recommended) | 3.11 | 3.5.x | 1.11.11 | `dbt-spark[session]==1.9.3` or `dbt-duckdb==1.10.1` | Verified end-to-end (see below). |
+| 5.1 | 3.11 | 3.5.6 | 1.11.11 | `dbt-spark[session]==1.9.3` or `dbt-duckdb==1.10.1` | Current Glue default. Adds native Iceberg. |
+| 6.0 | 3.13 | 4.1.1 | — | — | dbt-core does not yet support Python 3.13; dbt-spark does not yet advertise Spark 4.x support. Wait for adapter updates. |
+
+EMR-on-EC2 and EMR Serverless map similarly:
+
+| EMR release | Python | Spark | Notes |
+|---|---|---|---|
+| emr-6.15.0 | 3.7 | 3.4.1 | Legacy; avoid for new work. |
+| emr-7.2.0 | 3.9 | 3.5.1 | Compatible with dbt-core 1.9.10. |
+| **emr-7.5.0** (recommended) | 3.11 | 3.5.x | Verified end-to-end (see below). |
+
+## Verified end-to-end (2026-08-24)
+
+Run against real AWS in `us-east-1`, using `runner-dbt-aws-airflow 1.0.0`
++ `dbt-core 1.11.11` + `dbt-spark[session] 1.9.3`:
+
+| Runner | Backend | Status |
+|---|---|---|
+| `GlueSparkRunner` | Glue 5.0 Spark Job | PASS |
+| `GlueInteractiveSessionRunner` | Glue 5.0 warm session, `RunStatement` | PASS |
+| `EmrServerlessRunner` | emr-7.5.0 Spark job | PASS |
+| `EmrClusterStepRunner` | emr-7.5.0 single-node cluster + step + auto-terminate | PASS |
+
+Every runner reached its terminal SUCCESS state and cleaned up its
+own AWS resources. Full driver + captured logs live in the
+maintainer's local checkout (not committed).

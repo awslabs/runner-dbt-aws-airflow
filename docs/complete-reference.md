@@ -35,7 +35,7 @@ The lib is published on PyPI:
 pip install runner-dbt-aws-airflow
 
 # Or in a uv-managed project
-uv add dbt-aws
+uv add runner-dbt-aws-airflow
 ```
 
 Glue **workers** install the same wheel via the
