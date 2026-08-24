@@ -83,11 +83,21 @@ def build_project_archive(
             back to ``<project_dir>/target/manifest.json``. The file
             is placed in the archive as ``target/manifest.json``
             regardless of where it came from.
-        include_profiles: if ``True`` (default), ``profiles.yml`` is
-            included in the archive. Safe when using session-based AWS
-            auth (e.g. dbt-athena ``method: iam`` or boto3 session
-            profile). Set ``False`` if your profile holds static
-            credentials.
+        include_profiles: if ``True`` (default), the dbt
+            ``profiles.yml`` (the adapter connection profile for
+            ``dbt-athena`` / ``dbt-spark`` / ``dbt-duckdb`` /
+            ``dbt-postgres`` / etc. -- NOT an AWS credentials profile)
+            is included in the archive. In an IAM-first deployment
+            (recommended) ``profiles.yml`` describes only the adapter
+            (``type: spark``, ``method: session``, ``schema``,
+            ``threads``, ...) and carries no static credentials. The
+            worker authenticates to AWS via its IAM instance / task
+            role, and to any non-AWS warehouse via env vars injected
+            at task time. Set ``False`` only if you have a legacy
+            profile that hard-codes secrets; the fix in that case is
+            to migrate those to ``{{ env_var(...) }}`` (injected via
+            ``env_vars_json``) rather than shipping the profile with
+            credentials in it.
         run_dbt_deps: when ``True``, run ``dbt deps`` in ``project_dir``
             on the AIRFLOW box BEFORE fingerprinting so
             ``dbt_packages/`` lands in the archive. **Default**
@@ -127,9 +137,12 @@ def build_project_archive(
         raise ArchiveError(f"project_dir {project} does not contain dbt_project.yml")
 
     # sanity-check ``profiles.yml`` when include_profiles=True.
-    # Emit a WARNING (not a hard failure) if it contains patterns that
-    # look like static credentials. Backward-compatible: default stays
-    # True; users on IAM-role profiles see no warning.
+    # In an IAM-first deployment the file describes only the dbt
+    # adapter (type / method / schema / threads) and carries no
+    # credentials. The check below warns if the file looks like a
+    # legacy profile that still hard-codes secrets so operators can
+    # migrate to env-var references. Backward-compatible: default
+    # stays True; users on IAM-role profiles see no warning.
     if include_profiles:
         _warn_if_profiles_yml_carries_secrets(project)
 
@@ -303,9 +316,13 @@ def _validate_arcname(arc_relpath: str, *, source: Path) -> None:
 
 
 #: Substrings that suggest ``profiles.yml`` carries static credentials
-#: (or something else that shouldn't be shipped in an S3-uploaded
-#: archive). Case-insensitive. False positives are expected -- the
-#: point is to prompt operators to audit their profile, not to block.
+#: that shouldn't ship in an S3-uploaded archive. In an IAM-first
+#: deployment the dbt profile should describe only the adapter
+#: (``type`` / ``method`` / ``schema`` / ``threads``); any credential
+#: material belongs in env vars (injected at task time via
+#: ``env_vars_json``) or in the IAM role attached to the worker.
+#: Case-insensitive. False positives are expected -- the point is to
+#: prompt operators to audit their profile, not to block.
 _SECRET_PROFILE_PATTERNS: tuple[str, ...] = (
     "password:",
     "pass:",
@@ -328,10 +345,31 @@ def _warn_if_profiles_yml_carries_secrets(project: Path) -> None:
     """Emit a WARNING when ``profiles.yml`` at the project root looks
     like it carries static credentials.
 
+    The recommended shape for ``profiles.yml`` in this library is a
+    credential-free dbt adapter profile, e.g.::
+
+        my_spark_session_profile:
+          target: dev
+          outputs:
+            dev:
+              type: spark
+              method: session
+              schema: my_target_schema
+              threads: 4
+
+    The worker authenticates to AWS via its IAM instance / task role
+    (never via keys in the profile) and to any non-AWS warehouse via
+    env vars injected at task time. This helper runs a substring grep
+    against a lowercased copy of ``profiles.yml`` and warns if it
+    looks like a legacy profile that still hard-codes secrets, so the
+    operator can migrate to env-var references.
+
     Heuristic-only -- greps for known secret-key names. False positives
     (e.g. a comment mentioning ``password:``) are acceptable; the
     warning suggests operators use ``env_var()`` or IAM-role auth
     instead of shipping credentials in an S3-uploaded archive.
+
+    Never raises. Silent when:
 
     Never raises. Silent when:
 

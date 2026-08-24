@@ -23,8 +23,14 @@ from collections.abc import Iterator
 from pathlib import Path
 
 #: Top-level files (in the project root) that we always include if
-#: present. ``profiles.yml`` is included by default — callers using
-#: static-credentials profiles must opt out via ``include_profiles=False``.
+#: present. ``profiles.yml`` is the dbt adapter connection profile
+#: (NOT an AWS credentials profile) and is included by default. In
+#: an IAM-first deployment it should describe only the adapter
+#: (``type`` / ``method`` / ``schema`` / ``threads``) and carry no
+#: static credentials; callers with legacy profiles that still
+#: hard-code secrets can opt out via ``include_profiles=False`` and
+#: are advised to migrate to env-var references injected at task
+#: time via ``env_vars_json``.
 _TOP_LEVEL_FILES: frozenset[str] = frozenset(
     {
         "dbt_project.yml",
@@ -98,9 +104,12 @@ def iter_archive_files(
 
     Args:
         project_dir: dbt project root.
-        include_profiles: if True, include ``profiles.yml`` (if present).
-            Default behaviour at the public API is True; callers using
-            static-credentials profiles must opt out.
+        include_profiles: if True, include the dbt ``profiles.yml``
+            (adapter connection profile; NOT an AWS profile) if
+            present. Default is True at the public API. Recommended
+            shape is a credential-free profile that describes only
+            the adapter (type / method / schema / threads); callers
+            with legacy static-credentials profiles can opt out.
         manifest_path: explicit manifest source. If ``None``, we try
             ``<project_dir>/target/manifest.json``. The file is placed
             in the archive as ``target/manifest.json`` regardless of
