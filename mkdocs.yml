@@ -59,6 +59,7 @@ markdown_extensions:
   - attr_list
   - def_list
   - footnotes
+  - md_in_html
   - tables
   - toc:
       permalink: true
@@ -101,6 +102,7 @@ nav:
       - 'Example: Spark conf (spark_conf vs --conf)': reference/examples/spark-conf-demo.md
   - How-to:
       - how-to/index.md
+      - MWAA quickstart: how-to/mwaa-quickstart.md
       - Quickstart -- Glue Spark Job: how-to/quickstart-glue-spark.md
       - Quickstart -- Glue Session: how-to/quickstart-glue-session.md
       - Multi-runner mix: how-to/multi-runner-mix.md

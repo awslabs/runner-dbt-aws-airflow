@@ -90,20 +90,28 @@ from dbt_aws.common.builder import DbtDag, DbtTaskGroup
 from dbt_aws.common import ProjectConfig, load_runner_config
 ```
 
-Glue Python Shell can't reach PyPI directly (as of Glue 3.0). Use
-the S3-hosted wheel instead:
+On **Glue Spark Job / Interactive Session** (Glue 5.0 / 5.1 / 6.0) and
+**EMR Serverless / EMR-on-EC2**, install directly from PyPI via the
+worker's `--additional-python-modules` (or EMR bootstrap):
 
 ```
 --additional-python-modules
-  s3://<your-glue-assets-bucket>/dbt-aws/wheels/runner_dbt_aws_airflow-<version>-py3-none-any.whl,dbt-core==1.11.11,dbt-duckdb==1.10.1
+  runner-dbt-aws-airflow==1.0.0,dbt-core==1.12.3,dbt-spark[session]==1.11.0
 ```
 
-Every release publishes the wheel to PyPI via OIDC trusted publishing
-(see `.github/workflows/publish-pypi.yml`). Mirroring to S3 for Glue
-Python Shell consumers is a maintainer-side convenience, done via a
-local (gitignored) `scripts/` folder. See
-[Reference → `dbt_aws.compat`](docs/reference/compat.md) for pinned
-version strings.
+On **Glue Python Shell 3.0** the worker can't reach PyPI directly
+(`--python-modules-installer-option` is silently ignored). Mirror the
+wheel to S3 and reference it there instead:
+
+```
+--additional-python-modules
+  s3://<your-glue-assets-bucket>/dbt-aws/wheels/runner_dbt_aws_airflow-<version>-py3-none-any.whl,dbt-core==1.9.10,dbt-duckdb==1.9.6,duckdb==1.2.2
+```
+
+See
+[Reference → `dbt_aws.compat`](https://awslabs.github.io/runner-dbt-aws-airflow/reference/compat/)
+for the full version-matrix and pre-built install strings
+(`GLUE_PY311_PACKAGES`, `GLUE_PY39_PACKAGES`, `EMR_CLUSTER_BOOTSTRAP_ARGS`).
 
 ---
 
@@ -453,7 +461,7 @@ are welcome to include local test evidence in the description.
 | ruff (`dbt_aws`) | clean |
 | mypy (strict) | clean |
 | mkdocs build (strict mode) | clean |
-| Real-AWS end-to-end (2026-08-24) | `GlueSparkRunner`, `GlueInteractiveSessionRunner`, `EmrServerlessRunner`, `EmrClusterStepRunner` all verified against real AWS (`us-east-1`, Glue 5.0, emr-7.5.0). See [Reference → compat](https://awslabs.github.io/runner-dbt-aws-airflow/reference/compat/#verified-end-to-end-2026-08-24). |
+| Real-AWS end-to-end (2026-08-24) | `GlueSparkRunner`, `GlueInteractiveSessionRunner`, `EmrServerlessRunner`, `EmrClusterStepRunner` verified against real AWS (`us-east-1`, Glue 5.0, emr-7.5.0). **Glue 6.0** (Python 3.13, Spark 4.1.1) additionally verified with `runner-dbt-aws-airflow 1.0.0` + `dbt-core 1.12.3` + `dbt-spark[session] 1.11.0`. See [Reference → compat](https://awslabs.github.io/runner-dbt-aws-airflow/reference/compat/#verified-end-to-end-2026-08-24). |
 | Real-AWS OpenLineage (maintainer-local) | Glue Spark + Glue Session validated end-to-end. Python Shell blocked by dbt-core ≥1.10 requiring Py 3.10+ (Glue Python Shell caps at 3.9). |
 | Real-AWS collapse + Iceberg + Glue 5.1 (maintainer-local) | Validated: Glue Data Catalog + parquet tables + view_chain (11 → 6 Airflow tasks) and Glue 5.1 native Iceberg + materialised views + view_chain. |
 | MWAA end-to-end (maintainer-local) | Glue Spark + Glue Interactive Sessions validated on an MWAA test environment (Airflow 3.2.1). Python Shell verified on local Airflow 3.2.1. |

@@ -2,6 +2,7 @@
 
 Recipe-style guides for common scenarios.
 
+- **[MWAA quickstart](mwaa-quickstart.md)** — end-to-end deploy walkthrough for an existing MWAA 3.2.1 environment.
 - **[Quickstart — Glue Spark Job](quickstart-glue-spark.md)** — first DAG on a single
   Glue Spark Job runner. The 5-minute path.
 - **[Quickstart — Glue Session](quickstart-glue-session.md)** — first DAG on a Glue
