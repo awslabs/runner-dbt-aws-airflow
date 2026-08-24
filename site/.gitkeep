@@ -1,0 +1,7 @@
+# Placeholder to keep the ``site/`` directory present in fresh clones.
+#
+# Hatchling's ``[tool.hatch.build.targets.wheel.force-include]`` in
+# ``pyproject.toml`` references ``site/``; editable installs raise
+# ``FileNotFoundError`` when the directory doesn't exist. The real
+# HTML is produced by ``uv run mkdocs build --strict`` (run as part of
+# the ``.github/workflows/publish-*.yml`` release pipeline).

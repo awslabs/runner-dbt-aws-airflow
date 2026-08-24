@@ -1,0 +1,105 @@
+# CI: lint + type-check + tests + docs strict build.
+#
+# Runs on every push to ``main`` and every pull request. Matrixed
+# across the Python versions ``uv`` can resolve for us (3.10 - 3.12).
+# ``pyproject.toml`` still declares ``requires-python = ">=3.9"`` for
+# the wheel (Glue Python Shell 3.0 is stuck at 3.9), but
+# ``[tool.uv.environments]`` restricts dev resolution to >=3.10 so
+# apache-airflow 3.x can co-exist. The published wheel's 3.9
+# compatibility is verified indirectly by the smoke test in the
+# publish workflow.
+#
+# ``mkdocs build --strict`` doubles as a docs regression check --
+# the release workflow reuses the same build step.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: lint + mypy + pytest (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --group dev --group docs --python ${{ matrix.python-version }}
+
+      - name: Ruff lint
+        run: uv run --python ${{ matrix.python-version }} ruff check dbt_aws
+
+      - name: Ruff format check
+        run: uv run --python ${{ matrix.python-version }} ruff format --check dbt_aws
+
+      - name: mypy (strict)
+        run: uv run --python ${{ matrix.python-version }} mypy
+
+      - name: mkdocs build (strict)
+        run: uv run --python ${{ matrix.python-version }} mkdocs build --strict
+
+  wheel-smoke:
+    name: build wheel + smoke test
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install docs dependencies
+        run: uv sync --group docs --python 3.12
+
+      - name: Build docs (required by hatchling force-include)
+        run: uv run --python 3.12 mkdocs build --strict
+
+      - name: Build wheel + sdist
+        # Wheel only -- sdist skipped because it doesn't ship ``site/``
+        # which hatchling force-includes into the wheel.
+        run: uv build --wheel
+
+      - name: Wheel smoke test
+        uses: ./.github/actions/wheel-smoke
+
+      - name: Upload dist artefacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7

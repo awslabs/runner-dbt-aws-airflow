@@ -1,0 +1,64 @@
+# Pre-commit hooks for dbt-aws.
+#
+# Setup (once per clone):
+#   uv sync --group dev
+#
+# Then EITHER install the git hook (if you don't have another hook
+# manager active):
+#   uv run pre-commit install
+#
+# OR -- if you have ``core.hooksPath`` already pointing somewhere
+# (e.g. Amazon's ``git-defender`` at
+# ``/usr/local/amazon/var/git-defender/hooks``) -- skip the install
+# and run the hooks manually before each commit:
+#   uv run pre-commit run --all-files
+#
+# Either way, override a single commit with ``git commit --no-verify``
+# (use sparingly).
+repos:
+  # ----------------------------------------------------------------------
+  # Standard housekeeping
+  # ----------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^(mkdocs\.yml|\.airflow/)  # mkdocs uses !!python tags
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # ----------------------------------------------------------------------
+  # Ruff -- format + lint (Python source only).
+  # Mirrors `uv run ruff check` / `uv run ruff format`.
+  # ----------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # ----------------------------------------------------------------------
+  # Local hooks -- run via the workspace .venv so mypy + pytest pick up
+  # the same dependency versions CI uses.
+  # ----------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (dbt_aws)
+        entry: uv run mypy
+        language: system
+        types: [python]
+        files: ^dbt_aws/
+        pass_filenames: false  # mypy is configured globally via pyproject.toml
+
+      # NOTE: pytest hook removed for the initial public release --
+      # the ``tests/`` directory is kept local for now. Re-enable
+      # once tests land in this repo.

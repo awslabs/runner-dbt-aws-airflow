@@ -1,0 +1,86 @@
+# Composite action: build a wheel smoke test into the workflow.
+#
+# Verifies (a) the built wheel zip contains critical package files\n# (catches the class of hatchling-drops-files-via-.gitignore bugs)\n# and (b) the wheel + Airflow install into a fresh venv and the
+# primary imports every consumer relies on all resolve.
+#
+# Used by:
+# * .github/workflows/ci.yml       (post wheel build)
+# * .github/workflows/publish-*.yml (post wheel build, pre publish)
+#
+# Kept as an in-repo composite action rather than a standalone script
+# so the CI pipeline has no dependency on any file under scripts/
+# (which is a local-maintainer-only directory).
+
+name: Wheel smoke test
+description: Verify a built wheel contains critical files and imports cleanly.
+inputs:
+  wheel:
+    description: Path (or glob pattern) resolving to a single .whl file.
+    required: false
+    default: dist/*.whl
+
+runs:
+  using: composite
+  steps:
+    - name: Run wheel smoke test
+      shell: bash
+      run: |
+        set -euo pipefail
+        WHEEL="$(ls ${{ inputs.wheel }} | head -1)"
+        if [[ ! -f "$WHEEL" ]]; then
+          echo "::error::No wheel matched ${{ inputs.wheel }}"
+          exit 1
+        fi
+        echo "smoke-testing wheel: $WHEEL"
+
+        # 1. Verify the wheel zip contains critical package files.
+        python - "$WHEEL" <<'PY'
+        import sys, zipfile
+        REQUIRED = (
+            "dbt_aws/common/__init__.py",
+            "dbt_aws/common/archive/__init__.py",
+            "dbt_aws/common/archive/archive.py",
+            "dbt_aws/common/archive/fingerprint.py",
+            "dbt_aws/common/builder.py",
+            "dbt_aws/common/config.py",
+            "dbt_aws/common/runner/__init__.py",
+            "dbt_aws/common/graph/__init__.py",
+            "dbt_aws/common/airflow_extras/auto_deploy.py",
+            "dbt_aws/nonspark/runners/glue_python_shell.py",
+            "dbt_aws/spark/runners/glue_job.py",
+            "dbt_aws/spark/runners/glue_session.py",
+            "dbt_aws/spark/runners/emr_serverless.py",
+            "dbt_aws/spark/runners/emr_cluster_step.py",
+            "dbt_aws/compat.py",
+            "dbt_aws/cli.py",
+        )
+        wheel = sys.argv[1]
+        with zipfile.ZipFile(wheel) as z:
+            names = set(z.namelist())
+        missing = [m for m in REQUIRED if m not in names]
+        if missing:
+            print("ERROR: wheel missing required members:", file=sys.stderr)
+            for m in missing:
+                print(f"  - {m}", file=sys.stderr)
+            sys.exit(1)
+        print(f"wheel contents OK ({len(REQUIRED)} required members)")
+        PY
+
+        # 2. Install the wheel + airflow in a fresh venv and exercise
+        #    the primary imports every consumer relies on.
+        python -m venv /tmp/wheel-smoke
+        /tmp/wheel-smoke/bin/pip install --quiet "$WHEEL" "apache-airflow>=3.2,<4"
+        /tmp/wheel-smoke/bin/python - <<'PY'
+        from dbt_aws.common import (
+            ProjectConfig, load_runner_config,
+            ArchiveError, ProjectArchive, build_project_archive, fingerprint_project,
+        )
+        from dbt_aws.common.builder import DbtDag, DbtTaskGroup
+        from dbt_aws.common.airflow_extras.auto_deploy import build_and_upload_project_archive
+        from dbt_aws.spark.runners import (
+            GlueSparkRunner, GlueInteractiveSessionRunner,
+            EmrServerlessRunner, EmrClusterStepRunner,
+        )
+        from dbt_aws.nonspark.runners import GluePythonShellRunner
+        print("smoke: all imports OK")
+        PY

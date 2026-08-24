@@ -1,0 +1,72 @@
+# Build the mkdocs site and publish it to GitHub Pages.
+#
+# Enable Pages ONCE in repo Settings -> Pages -> Build and deployment
+# -> Source = "GitHub Actions" (not the legacy branch-based flow).
+#
+# The offline wheel-bundled site (served by ``runner-dbt-aws-airflow
+# docs``) is the canonical distribution; Pages is a convenience for
+# users who want to browse before installing.
+
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: mkdocs build --strict
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install docs deps
+        run: uv sync --group docs --python 3.12
+
+      - name: Build docs
+        run: uv run --python 3.12 mkdocs build --strict
+
+      - name: Upload Pages artefact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5

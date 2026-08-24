@@ -1,0 +1,30 @@
+# Dependabot -- weekly updates for GitHub Actions + Python deps.
+#
+# Kept conservative:
+# * Actions ecosystem catches CVE'd or deprecated action versions.
+# * pip ecosystem watches ``pyproject.toml`` runtime + optional deps.
+# * uv is not yet supported natively by Dependabot; ``uv.lock`` is
+#   refreshed manually alongside pyproject bumps.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "github-actions"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "python"]
+    open-pull-requests-limit: 5
+    # ``dbt-core`` / ``apache-airflow`` versions are pinned by design
+    # (worker-side install; MWAA constraint files). Skip automatic
+    # bumps -- release engineer owns those.
+    ignore:
+      - dependency-name: "dbt-core"
+      - dependency-name: "apache-airflow"
+      - dependency-name: "apache-airflow-providers-*"

@@ -1,0 +1,89 @@
+name: Bug report
+description: Report a defect in runner-dbt-aws-airflow.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please fill out the fields below so
+        we can reproduce and prioritise. If this looks like a security
+        issue, DO NOT file a public issue — see
+        [`SECURITY.md`](../../SECURITY.md) for the private report path.
+
+  - type: input
+    id: version
+    attributes:
+      label: runner-dbt-aws-airflow version
+      placeholder: "0.12.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runner
+    attributes:
+      label: Runner shape
+      options:
+        - GlueSparkRunner
+        - GlueInteractiveSessionRunner
+        - GluePythonShellRunner
+        - EmrServerlessRunner
+        - EmrClusterStepRunner
+        - Not runner-specific / library core
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.3"
+    validations:
+      required: true
+
+  - type: input
+    id: airflow
+    attributes:
+      label: Airflow version (MWAA or self-hosted)
+      placeholder: "3.2.1 (MWAA)"
+
+  - type: input
+    id: region
+    attributes:
+      label: AWS region
+      placeholder: "eu-west-1"
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include the failing traceback if any.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        A redacted `runners.yml` + DAG snippet is ideal. If it involves a
+        specific AWS resource state (Glue Job doesn't exist, EMR cluster
+        stuck), describe that too.
+      render: python
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Sanity checks
+      options:
+        - label: I searched existing issues and did not find a duplicate
+          required: true
+        - label: The failure is reproducible on the latest release from PyPI
+          required: false

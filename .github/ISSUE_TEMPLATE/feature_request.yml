@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a new feature or API surface.
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We prefer additive changes. Breaking changes need a strong
+        motivation and go into the next minor.
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What problem are you trying to solve? What does your workflow look like today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API / behavior
+      description: A concrete sketch (YAML snippet, Python signature) is more useful than a description in prose.
+      render: python
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How are you solving this today, if at all?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope guess
+      options:
+        - Core library (dbt_aws.common)
+        - New runner or runner kwarg
+        - Docs / examples only
+        - Not sure
