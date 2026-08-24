@@ -1,11 +1,16 @@
 # dbt-aws
 
-Run [dbt](https://www.getdbt.com/) projects on **AWS Glue** (Spark Jobs, Interactive Sessions,
-Python Shell) — orchestrated from **Apache Airflow**.
+Run [dbt](https://www.getdbt.com/) projects on **AWS Glue** (Spark Jobs,
+Interactive Sessions, Python Shell) and **Amazon EMR** (Serverless,
+on-EC2) — orchestrated from **Apache Airflow**.
 
-One library, five runner shapes, declarative routing, visual grouping, and
-**worker-side dbt package installs** so your Airflow deployment (including MWAA)
-stays lean.
+One library, five runner shapes, declarative routing, visual grouping,
+and **worker-side dbt package installs** so your Airflow deployment
+(including MWAA) stays lean.
+
+> **PyPI distribution:** `runner-dbt-aws-airflow`.
+> **Python import path:** `dbt_aws` (PEP 420 namespace package).
+> **Repo:** <https://github.com/awslabs/runner-dbt-aws-airflow>.
 
 ```python title="One DAG, three runners, layer-aware routing"
 from dbt_aws.common import ProjectConfig, TaskGroupConfig, TaskGroupingConfig
@@ -114,21 +119,28 @@ for the full switch.
 
 </div>
 
-## Why dbt-aws
+## Why runner-dbt-aws-airflow
 
-| Concern | dbt-aws | Cosmos / others |
-|---|---|---|
-| Multi-runner per DAG | First-class (`runners=`, `default_runner=`) | Single backend |
-| Tag-based bulk routing | `tag_runners` (one line per layer) | Per-model only |
-| YAML config alternative | `load_runner_config()` | Python-only |
-| Glue Spark Job | Native runner | Via subprocess |
-| Glue Interactive Session (warm + per-node) | Native runner | N/A |
-| Per-model Glue Job naming | Default | N/A |
-| Content-addressed entry script | Default | N/A |
-| Custom async triggers (asyncio.to_thread) | Yes | Inherits Amazon provider behaviour |
+- First-class multi-runner dispatch per DAG (`runners=`,
+  `default_runner=`).
+- Tag-based bulk routing via `tag_runners` (one line per layer) or the
+  unified `overrides:` block.
+- YAML config alternative to Python (`load_runner_config()`).
+- Native runners for Glue Spark Job, Glue Interactive Session (warm +
+  per-node), Glue Python Shell, EMR Serverless, and EMR-on-EC2
+  cluster step.
+- Per-model Glue Job naming and content-addressed worker entry
+  scripts (idempotent uploads).
+- Async triggers on top of `asyncio.to_thread`, so long-running Glue
+  Sessions / EMR steps don't block Airflow worker slots.
 
 ## Status
 
-- **Validated runners:** Glue Spark Job, Glue Interactive Session (warm + per-node), Glue Python Shell
-- **Known limitation:** Glue 3.0 Python Shell can't install from an S3 wheel URI
-  (re-enabled once the lib publishes to real PyPI)
+- **Validated runners:** Glue Spark Job, Glue Interactive Session
+  (warm + per-node), Glue Python Shell, EMR Serverless, EMR-on-EC2
+  cluster step.
+- **Known constraint:** Glue 3.0 Python Shell doesn't honour
+  `--python-modules-installer-option`, so it can't install
+  `runner-dbt-aws-airflow` directly from PyPI. Use an S3 wheel URI in
+  its `--additional-python-modules` argument instead; see
+  [Reference → compat](reference/compat.md).

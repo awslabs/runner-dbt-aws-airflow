@@ -18,7 +18,8 @@ which runs Python 3.9 on Amazon Linux 2):
 
 1. `--python-modules-installer-option` is documented but silently IGNORED
    on Glue 3.0 Python Shell. Only Glue Spark honours it. `pip` never sees
-   the `--extra-index-url` -> `dbt-aws` fails to resolve from PyPI.
+   the `--extra-index-url` -> `runner-dbt-aws-airflow` fails to resolve
+   from PyPI.
 2. PyPI hosts a **broken shadow copy** of `dbt-core==1.9.9` with a
    `Jinja2==3.1.2` exact pin. Real PyPI's 1.9.9 is fine, but pip's
    resolver picks PyPI's when both indexes are in the list.
@@ -49,7 +50,7 @@ runner = GluePythonShellRunner(
 The string it expands to:
 
 ```
-dbt-aws,
+runner-dbt-aws-airflow==<version>,
 dbt-core==1.9.10,
 dbt-duckdb==1.9.6,
 duckdb==1.2.2,
@@ -108,7 +109,7 @@ Three real causes, in order of likelihood:
       -p 5433:5432 postgres:15-alpine
   # then set in airflow.cfg:
   # sql_alchemy_conn = postgresql+psycopg2://airflow:airflow@127.0.0.1:5433/airflow
-  uv add --dev psycopg2-binary asyncpg
+  uv add --group dev psycopg2-binary asyncpg
   uv run airflow db migrate
   ```
 * **Quick mitigation:** limit bronze fan-out via Airflow [pools](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/pools.html)
@@ -336,8 +337,8 @@ string ``"None"``. ``DescribeCluster(cluster_id='None')`` errors out.
 
 **Fixed automatically** — the lib wraps the teardown operator in
 ``_ResilientEmrTerminate`` which raises ``AirflowSkipException`` when the
-resolved ``job_flow_id`` is ``None`` or empty. Upgrade to ``dbt-aws``
-to pick up the fix.
+resolved ``job_flow_id`` is ``None`` or empty. Present in
+``runner-dbt-aws-airflow`` from the first public release.
 ## `retries=N` on EMR Cluster Step tasks races the teardown
 
 **Symptom:** with ``default_args={"retries": 2}`` or
@@ -462,10 +463,11 @@ the statement's `Output` field. Any non-JSON content — ANSI escape codes,
 deprecation warnings, dbt-utils version notices — makes the parser fail and
 surface a successful dbt run as an error.
 
-**Fix:** upgrade to `dbt-aws`. The generated statement code now
-`os.dup2`'s fd 1 + fd 2 to `/dev/null` around the `run_one_node` call, so dbt's
-output never reaches Glue's captured buffer. dbt's own `logs/dbt.log` and the
-artefacts uploaded to S3 are unaffected.
+**Fix:** the generated statement code ``os.dup2``'s fd 1 + fd 2 to
+``/dev/null`` around the ``run_one_node`` call, so dbt's output never
+reaches Glue's captured buffer. dbt's own ``logs/dbt.log`` and the
+artefacts uploaded to S3 are unaffected. Present in
+``runner-dbt-aws-airflow`` from the first public release.
 
 ## EMR Cluster Step: `ModuleNotFoundError: No module named 'dbt_aws'`
 
@@ -484,9 +486,9 @@ Even though the bootstrap installed `dbt-aws` successfully.
 into 3.11, but Spark's default `PYSPARK_PYTHON` is `/usr/bin/python3` (3.9)
 which doesn't see the 3.11 site-packages.
 
-**Fix:** upgrade to `dbt-aws`. The runner now sets four `--conf`
-flags from `pyspark_python` (default `/usr/bin/python3.11`) that cover both
-`client` and `cluster` deploy modes:
+**Fix:** the runner sets four ``--conf`` flags from ``pyspark_python``
+(default ``/usr/bin/python3.11``) that cover both ``client`` and
+``cluster`` deploy modes:
 
 ```
 spark.pyspark.python              (canonical, both modes)
@@ -494,6 +496,8 @@ spark.pyspark.driver.python       (client-mode driver)
 spark.yarn.appMasterEnv.PYSPARK_PYTHON  (cluster-mode AM)
 spark.executorEnv.PYSPARK_PYTHON  (executors, any mode)
 ```
+
+Present in ``runner-dbt-aws-airflow`` from the first public release.
 
 ## EMR Cluster Step: `Permission denied /home/.duckdb`
 
@@ -509,10 +513,11 @@ user) and `/home` isn't writable to the container user. dbt-duckdb's
 Spark's `spark.yarn.appMasterEnv.HOME` config is overridden by YARN's
 launcher AFTER Spark's env-passing.
 
-**Fix:** upgrade to `dbt-aws`. The entry script's
-`_ensure_writable_home()` helper probes `$HOME` with `tempfile.mkdtemp()`
-(directory creation, matching what dbt-duckdb needs) and repoints HOME to
-`/tmp` if the probe fails. Runs before dbt is invoked.
+**Fix:** the entry script's ``_ensure_writable_home()`` helper probes
+``$HOME`` with ``tempfile.mkdtemp()`` (directory creation, matching
+what dbt-duckdb needs) and repoints HOME to ``/tmp`` if the probe
+fails. Runs before dbt is invoked. Present in
+``runner-dbt-aws-airflow`` from the first public release.
 
 ## EMR Cluster Step: `User did not initialize spark context!`
 
@@ -645,7 +650,8 @@ MWAA's base image already carries compatible pinned versions of
 pip resolve against those alone works.
 
 ```txt title="requirements.txt for MWAA (correct)"
-# Only the dbt-aws wheel; NO --constraint line, NO apache-airflow-*.
+# Only the runner-dbt-aws-airflow wheel; NO --constraint line, NO
+# apache-airflow-*.
 /usr/local/airflow/plugins/runner_dbt_aws_airflow-<version>-py3-none-any.whl
 ```
 
@@ -691,9 +697,10 @@ For MWAA, the environment's execution role needs `s3:PutObject` on the deploy bu
 new version's S3 upload overwrites the key, all old Glue Jobs (still pointing at the
 shared key) break.
 
-**Why it doesn't happen:** Since dbt-aws the worker entrypoint key is
-**content-addressed**: `s3://.../dbt-aws/worker_entrypoint/<md5>.py`. Old Glue Jobs keep
-pointing at their original md5 forever; the new version uploads a new md5 to a new key.
+**Why it doesn't happen:** the worker entrypoint key is
+**content-addressed**: `s3://.../dbt-aws/worker_entrypoint/<md5>.py`.
+Old Glue Jobs keep pointing at their original md5 forever; the new
+version uploads a new md5 to a new key.
 
 Confirm via parse log:
 

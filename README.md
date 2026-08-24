@@ -128,8 +128,8 @@ SecurityGroup wiring, DAG folder S3 sync.
 
 ### 2. Sample dbt project
 
-Minimum shape — one seed, one model, `dbt-duckdb` locally / `dbt-glue`
-on Glue:
+Minimum shape — one seed, one model, `dbt-spark` on Glue Spark
+(both locally via the `session` method and on the Glue worker):
 
 ```
 my_dbt_project/
@@ -159,16 +159,19 @@ models:
     +schema: analytics
 ```
 
-`profiles.yml` (local dev; MWAA-side dbt runs use the Glue Spark
-runtime's own catalog):
+`profiles.yml` — dbt adapter connection profile. Carries no
+credentials; the Glue worker authenticates to AWS via its IAM role
+and dbt-spark's `session` method binds to the SparkSession the Glue
+runtime already provides:
 
 ```yaml
 my_dbt_project:
   target: dev
   outputs:
     dev:
-      type: duckdb
-      path: dev.duckdb
+      type: spark
+      method: session
+      schema: analytics
       threads: 4
 ```
 
@@ -213,7 +216,7 @@ runners:
     glue_version: "5.0"
     create_job_kwargs:
       DefaultArguments:
-        "--additional-python-modules": "s3://my-dbt-aws-bucket/dbt-aws/wheels/runner_dbt_aws_airflow-<version>-py3-none-any.whl,dbt-core==1.11.11,dbt-duckdb==1.10.1"
+        "--additional-python-modules": "runner-dbt-aws-airflow==1.0.0,dbt-core==1.11.11,dbt-spark[session]==1.9.0"
 
 default_runner: glue_spark
 
@@ -348,7 +351,8 @@ shape). Per-runner blocks and per-node / per-tag overrides merge
 per key.
 
 **Worker-side dbt-core install** — MWAA's `requirements.txt` stays
-lean; workers install `dbt-core` + `dbt-duckdb` + `packages.yml` deps
+lean; workers install `dbt-core` + the appropriate adapter
+(`dbt-spark`, `dbt-duckdb`, `dbt-athena`, ...) + `packages.yml` deps
 on the fly.
 
 **OpenLineage + SageMaker Unified Studio (opt-in)** — emit
@@ -449,7 +453,7 @@ are welcome to include local test evidence in the description.
 | ruff (`dbt_aws`) | clean |
 | mypy (strict) | clean |
 | mkdocs build (strict mode) | clean |
-| Real-AWS integration (maintainer-local) | Glue Spark Job, Glue Interactive Session (warm + per-node), and Glue Python Shell validated end-to-end |
+| Real-AWS end-to-end (2026-08-24) | `GlueSparkRunner`, `GlueInteractiveSessionRunner`, `EmrServerlessRunner`, `EmrClusterStepRunner` all verified against real AWS (`us-east-1`, Glue 5.0, emr-7.5.0). See [Reference → compat](https://awslabs.github.io/runner-dbt-aws-airflow/reference/compat/#verified-end-to-end-2026-08-24). |
 | Real-AWS OpenLineage (maintainer-local) | Glue Spark + Glue Session validated end-to-end. Python Shell blocked by dbt-core ≥1.10 requiring Py 3.10+ (Glue Python Shell caps at 3.9). |
 | Real-AWS collapse + Iceberg + Glue 5.1 (maintainer-local) | Validated: Glue Data Catalog + parquet tables + view_chain (11 → 6 Airflow tasks) and Glue 5.1 native Iceberg + materialised views + view_chain. |
 | MWAA end-to-end (maintainer-local) | Glue Spark + Glue Interactive Sessions validated on an MWAA test environment (Airflow 3.2.1). Python Shell verified on local Airflow 3.2.1. |

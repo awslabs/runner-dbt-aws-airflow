@@ -1,141 +1,97 @@
 # Examples
 
-Runnable DAGs and dbt-project scaffolding that demonstrate every
-routing / config / lineage / collapse feature in one place. Each
-example below names the file it corresponds to in the repository's
-example DAGs and its sibling YAML / project scaffolding.
+End-to-end usage examples. Each example points at a How-to page in
+this book with a self-contained recipe and copy-pasteable code.
 
-## Multi-runner mix (Python config)
+## Single-runner Glue Spark DAG
 
-**File:** `airflow_dag_all_runners_mix.py`
+Simplest shape: one runner, one DAG, all dbt nodes go through the
+same Glue Spark Job.
 
-- Three runners declared inline (Glue Spark Job, Glue Session warm,
-  Glue Session per-node).
-- `tag_runners` routes `bronze` → glue_spark and `silver,gold` →
-  session_warm.
-- `overrides` pins standalone seeds (`regions`, `audit_log`) to
-  specific runners.
-- `task_groups` gives visual nesting: `bronze` / `silver` / `gold` /
-  `other` folders.
-- 36 Airflow tasks total, exercised end-to-end against real AWS in
-  the maintainer's smoke suite.
+Walkthrough: [Getting started](getting-started.md).
+
+## Multi-runner mix (per-tag routing)
+
+Different dbt layers on different AWS backends in one DAG. Bronze on
+a Glue Spark Job, silver/gold on a warm Glue Interactive Session.
+
+Walkthrough: [How-to: Multi-runner mix](how-to/multi-runner-mix.md).
+
+Minimal shape:
 
 ```python
+from dbt_aws.common import ProjectConfig
+from dbt_aws.common.builder import DbtDag
+from dbt_aws.spark.runners import GlueSparkRunner, GlueInteractiveSessionRunner
+
 dag = DbtDag(
-    dag_id="dbt_project__all_runners_mix",
-    project=ProjectConfig(mode="manifest", manifest_path=MANIFEST),
+    dag_id="medallion",
+    project=ProjectConfig(mode="manifest", manifest_path="target/manifest.json"),
     runners={
-        "glue_spark":       glue_spark,
-        "session_warm":     session_warm,
-        "session_per_node": session_per_node,
+        "glue_spark":   GlueSparkRunner(mode="create", iam_role_name="GlueRole"),
+        "session_warm": GlueInteractiveSessionRunner(iam_role_arn="...", reusable=True),
     },
+    default_runner="session_warm",
     tag_runners={
-        "bronze": "glue_spark",
-        "silver": "session_warm",
-        "gold":   "session_warm",
+        "bronze":      "glue_spark",
+        "silver,gold": "session_warm",
     },
-    overrides={
-        "regions":   {"runner": "session_per_node"},
-        "audit_log": {"runner": "glue_spark"},
-    },
-    task_groups=["bronze", "silver", "gold", "other"],
+    project_archive_s3="s3://my-bucket/dbt-archives/abc.tar.gz",
 )
 ```
 
-## Multi-runner mix (YAML config)
+## YAML-driven multi-runner mix
 
-**Files:** `airflow_dag_all_runners_yaml.py` + `runners_all.yml`
+Same shape as above, but the runner objects, routing, and visual
+grouping live in a `runners.yml` file for ops-friendly editing. The
+Python DAG file is a thin loader.
 
-1:1 mirror of the Python variant, but the runner objects + routing +
-visual grouping live in YAML for ops-friendly editing.
+Walkthrough: [Reference: YAML config](reference/runner-config-yaml.md).
 
-```yaml title="runners_all.yml"
-runners:
-  glue_spark:
-    type: glue_spark
-    # ... runner kwargs ...
-  session_warm:
-    type: glue_interactive_session
-    reusable: true
-    # ...
-  session_per_node:
-    type: glue_interactive_session
-    reusable: false
-    # ...
+Minimal shape:
 
-tag_runners:
-  bronze: glue_spark
-  silver: session_warm
-  gold:   session_warm
+```python
+from pathlib import Path
 
-overrides:
-  regions:   { runner: session_per_node }
-  audit_log: { runner: glue_spark }
+from dbt_aws.common import ProjectConfig, load_runner_config
+from dbt_aws.common.builder import DbtDag
 
-task_groups: [bronze, silver, gold, other]
-```
-
-The Python DAG file is a thin loader:
-
-```python title="airflow_dag_all_runners_yaml.py"
-from dbt_aws import DbtDag, ProjectConfig, load_runners
-
-runners, tag_runners, overrides, task_groups = load_runners("runners_all.yml")
+cfg = load_runner_config(Path("runners.yml"))
 
 dag = DbtDag(
-    dag_id="dbt_project__all_runners_yaml",
-    project=ProjectConfig(mode="manifest", manifest_path=MANIFEST),
-    runners=runners,
-    tag_runners=tag_runners,
-    overrides=overrides,
-    task_groups=task_groups,
+    dag_id="medallion_yaml",
+    project=ProjectConfig(mode="manifest", manifest_path="target/manifest.json"),
+    config=cfg,
+    project_archive_s3="s3://my-bucket/dbt-archives/abc.tar.gz",
 )
 ```
 
-Both variants produce byte-identical DAGs; the YAML path picks up
-every field.
+## Per-tag task-collapse ("group" mode)
 
-## TPC-H medallion dbt project
+Fold a group of tagged dbt nodes into one Airflow task. Useful for
+gold-layer chains where the dbt-side dependency graph is fine but you
+want a single Airflow task per tag.
 
-**Path:** `dbt_project/` (a small TPC-H medallion on `dbt-duckdb`
-with `external` Parquet materialization on S3, used by both DAGs
-above).
+Walkthrough: [How-to: Bulk-by-tag task collapse](how-to/tag-groups-bulk-collapse.md).
 
-| Layer  | Models                                                                     | Tags     | Materialization         |
-|--------|----------------------------------------------------------------------------|----------|-------------------------|
-| bronze | 8 (`br_customer`, `br_lineitem`, …)                                        | `bronze` | external Parquet on S3  |
-| silver | 4 (`sv_dim_customer`, `sv_fact_orders`, …)                                 | `silver` | external Parquet on S3  |
-| gold   | 4 (`gd_top_customers`, `gd_revenue_by_region`, …)                          | `gold`   | external Parquet on S3  |
-| seeds  | `regions`, `audit_log`, `currencies`, `customers`, `orders`, `products`    | various  | —                       |
+## OpenLineage emission from a Glue runner
 
-Tags are applied via `dbt_project.yml`:
+Emit `START` / `COMPLETE` lineage events to S3 (NDJSON) or SageMaker
+Unified Studio (SMUS) via `datazone:PostLineageEvent`.
 
-```yaml
-models:
-  dbt_project:
-    bronze:
-      +tags: ["bronze"]
-      +materialized: external
-      +format: parquet
-    silver:
-      +tags: ["silver"]
-      +materialized: external
-      +format: parquet
-    gold:
-      +tags: ["gold"]
-      +materialized: external
-      +format: parquet
-```
+Walkthrough: [How-to: Enable OpenLineage](how-to/enable-openlineage.md).
 
-## Related how-tos
+## Iceberg + Glue 5.1 collapse
 
-- [Multi-runner mix](how-to/multi-runner-mix.md) — narrative walkthrough of
-  the Python vs YAML variants above.
-- [Route by tag](how-to/route-by-tag.md) — how `tag_runners` picks a
-  runner for each dbt node.
-- [Tag groups: bulk collapse](how-to/tag-groups-bulk-collapse.md) — how
-  `tag_targets` / `tag_profiles` layer under the same routing.
-- [Multi-profile / multi-target](how-to/multi-profile-target.md) —
-  per-tag profile + target selection.
-- [Enable OpenLineage](how-to/enable-openlineage.md) — attach lineage
-  events to any Glue runner in the mix.
+Native Iceberg tables and materialised views on Glue 5.1, with
+task-collapse folding view-chain overhead into single Airflow tasks.
+
+Walkthrough:
+[How-to: Collapse + Iceberg Materialized Views on Glue 5.1](how-to/collapse-iceberg-glue.md).
+
+## Related pages
+
+- [Concepts &rarr; Runners](concepts/runners.md) &mdash; the five runner shapes and when to use each.
+- [Concepts &rarr; Routing](concepts/routing.md) &mdash; `overrides` / `tag.<name>` / `mode` semantics.
+- [Reference &rarr; Runner overrides](reference/runner-overrides.md) &mdash; every per-node knob.
+- [Troubleshooting](troubleshooting.md) &mdash; MWAA + Glue Python Shell known issues.
