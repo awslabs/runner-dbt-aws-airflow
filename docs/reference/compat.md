@@ -112,9 +112,9 @@ below reflect what the maintainers verified end-to-end on real AWS.
 |---|---|---|---|---|---|
 | **3.0** (Python Shell) | 3.9 | — | 1.9.10 | `dbt-duckdb==1.9.6` + `duckdb==1.2.2` | Only version supporting Glue Python Shell. GLIBC_2.26. |
 | 4.0 | 3.10 | 3.3 | 1.11.x | `dbt-spark==1.9.3` or `dbt-duckdb==1.10.1` | Previous default. |
-| **5.0** (recommended) | 3.11 | 3.5.x | 1.11.11 | `dbt-spark[session]==1.9.3` or `dbt-duckdb==1.10.1` | Verified end-to-end (see below). |
+| **5.0** | 3.11 | 3.5.x | 1.11.11 | `dbt-spark[session]==1.9.3` or `dbt-duckdb==1.10.1` | Verified end-to-end (see below). |
 | 5.1 | 3.11 | 3.5.6 | 1.11.11 | `dbt-spark[session]==1.9.3` or `dbt-duckdb==1.10.1` | Current Glue default. Adds native Iceberg. |
-| 6.0 | 3.13 | 4.1.1 | — | — | dbt-core does not yet support Python 3.13; dbt-spark does not yet advertise Spark 4.x support. Wait for adapter updates. |
+| **6.0** (recommended) | 3.13 | 4.1.1 | 1.12.3 | `dbt-spark[session]==1.11.0` | Verified end-to-end (see below). Iceberg v3, ~30% price drop vs 5.x. |
 
 EMR-on-EC2 and EMR Serverless map similarly:
 
@@ -126,15 +126,15 @@ EMR-on-EC2 and EMR Serverless map similarly:
 
 ## Verified end-to-end (2026-08-24)
 
-Run against real AWS in `us-east-1`, using `runner-dbt-aws-airflow 1.0.0`
-+ `dbt-core 1.11.11` + `dbt-spark[session] 1.9.3`:
+Run against real AWS in `us-east-1`, using `runner-dbt-aws-airflow 1.0.0`:
 
-| Runner | Backend | Status |
-|---|---|---|
-| `GlueSparkRunner` | Glue 5.0 Spark Job | PASS |
-| `GlueInteractiveSessionRunner` | Glue 5.0 warm session, `RunStatement` | PASS |
-| `EmrServerlessRunner` | emr-7.5.0 Spark job | PASS |
-| `EmrClusterStepRunner` | emr-7.5.0 single-node cluster + step + auto-terminate | PASS |
+| Runner | Backend | dbt-core | Adapter | Status |
+|---|---|---|---|---|
+| `GlueSparkRunner` | Glue 5.0 Spark Job | 1.11.11 | `dbt-spark[session]==1.9.3` | PASS |
+| `GlueInteractiveSessionRunner` | Glue 5.0 warm session, `RunStatement` | 1.11.11 | `dbt-spark[session]==1.9.3` | PASS |
+| `EmrServerlessRunner` | emr-7.5.0 Spark job | 1.11.11 | `dbt-spark[session]==1.9.3` | PASS |
+| `EmrClusterStepRunner` | emr-7.5.0 single-node cluster + step + auto-terminate | 1.11.11 | `dbt-spark[session]==1.9.3` | PASS |
+| `GlueSparkRunner` (Glue 6.0) | Glue 6.0 Spark Job (Python 3.13, Spark 4.1.1) | **1.12.3** | **`dbt-spark[session]==1.11.0`** | PASS |
 
 Every runner reached its terminal SUCCESS state and cleaned up its
 own AWS resources. Full driver + captured logs live in the
